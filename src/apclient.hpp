@@ -400,7 +400,7 @@ private:
         log("Server connected");
         _state = State::SOCKET_CONNECTED;
         if (_hOnSocketConnected) _hOnSocketConnected();
-        _socketReconnectInterval = 1000;
+        _socketReconnectInterval = 1500;
     }
 
     void onclose()
@@ -587,7 +587,7 @@ private:
         // NOTE: browsers have a very badly implemented connection rate limit
         // alternatively we could always wait for onclose() to get the actual
         // allowed rate once we are over it
-        unsigned long maxReconnectInterval = std::max(10000UL, _ws->get_ok_connect_interval());
+        unsigned long maxReconnectInterval = std::max(15000UL, _ws->get_ok_connect_interval());
         if (_socketReconnectInterval > maxReconnectInterval) _socketReconnectInterval = maxReconnectInterval;
     }
 
@@ -620,7 +620,7 @@ private:
     std::function<void(const json&)> _hOnBounced = nullptr;
 
     unsigned long _lastSocketConnect;
-    unsigned long _socketReconnectInterval = 1000;
+    unsigned long _socketReconnectInterval = 1500;
     std::set<int> _checkQueue;
     std::set<int> _scoutQueue;
     ClientStatus _clientStatus = ClientStatus::UNKNOWN;

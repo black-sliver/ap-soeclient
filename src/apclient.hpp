@@ -240,7 +240,13 @@ public:
     {
         // returns true if status update was sent or queued
         if (_state == State::SLOT_CONNECTED) {
-            // TODO: implement this
+            auto packet = json{{
+                {"cmd", "StatusUpdate"},
+                {"status", status},
+            }};
+            debug("> " + packet[0]["cmd"].get<std::string>() + ": " + packet.dump());
+            _ws->send(packet.dump());
+            return true;
         }
         _clientStatus = status;
         return false;

@@ -1,7 +1,7 @@
 # AP SoE Client
 
 This is the [Archipelago Multiworld](https://github.com/ArchipelagoMW/Archipelago) client for the Secret of Evermore
-world.
+world. This is still in beta, but should mostly work.
 
 ## How does it work
 

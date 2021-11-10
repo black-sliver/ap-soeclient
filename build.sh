@@ -21,7 +21,7 @@ fi
 
 # release build
 if [[ "$1" != "debug" ]]; then
-  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.min.html" -fexceptions -Oz
+  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.min.html" -fexceptions -Oz -flto
   # pre-compress to be served through .htaccess overrides
   brotli -k -q 11 "$BUILD_DIR/$NAME.min.wasm" "$BUILD_DIR/$NAME.min.js" "$BUILD_DIR/$NAME.min.html"
   gzip -k -9 "$BUILD_DIR/$NAME.min.wasm" "$BUILD_DIR/$NAME.min.js" "$BUILD_DIR/$NAME.min.html"
@@ -38,7 +38,7 @@ fi
 
 # remove debug build if we did not specify debug, copy, rename and package everything
 if [[ "$1" != "debug" ]]; then
-  rm "$BUILD_DIR/$NAME.html" "$BUILD_DIR/$NAME.js" "build/$NAME.wasm"
+  rm -f "$BUILD_DIR/$NAME.html" "$BUILD_DIR/$NAME.js" "build/$NAME.wasm"
   mv "$BUILD_DIR/$NAME.min.html" "$BUILD_DIR/index.html" # this may change with version selection in the future
   cp "util/htaccess" "$BUILD_DIR/.htaccess" # copy .htaccess that automagically serves pre-compressed wasm, js and css
   cp "util/serve.py" "$BUILD_DIR/" # copy serve.py to build output

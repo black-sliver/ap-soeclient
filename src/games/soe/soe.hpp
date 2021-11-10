@@ -41,14 +41,13 @@ protected:
                 [this,callback](const std::string& res)
         {
             if (memcmp(res.c_str(), CART_HEADER, CART_HEADER_LEN)) {
-                //log(("wrong cart: \"" + res.substr(0,21) + "\"").c_str());
                 callback("","");
             } else {
                 _snes->read_memory(AP_SECTION_LOC, AP_SECTION_LEN,
                         [callback](const std::string& res)
                 {
                     std::string seed = res.substr(0,32);
-                    callback(seed.c_str(), res.c_str()+32); // c_str() will correctly trim
+                    callback(seed.c_str(), res.c_str()+32); // c_str() trims at NUL byte
                 });
             }
         });
@@ -56,20 +55,8 @@ protected:
 
     virtual void read_joined(std::function<void(bool)> callback) override
     {
-        // 7e22eb&0x04 in attraction mode
-        // 7e22ab&0x40 set when intro is done (and saved to sram)
-        
-        // (7e22ea&0x08 set when scrolling over machine)
-        // (7e22f1&0x40 inside outro)
-        // (7e22ec&0x20 prof lab is intro)
-        
-        // 7e0adb map number:
-        // (00 = boot|alarm room), 02 = old mansion, 03 = new mansion,
-        // 31 = old town, 32 = new town, (46 = prof lab), 61 = machine,
-        // >7e = invalid
-        // but load / enter name screen keeps previous map
-        // -> map number not in [0x02,0x03,0x31,0x32,0x61,>0x7e]
-        
+        // this will flag is set when entering the jungle after intro cutscene/fight,
+        // even if the intro/fight is skipped
         if (_snes->get_state() != USB2SNES::State::SNES_CONNECTED) callback(false);
         _snes->read_memory(0x7e22ab, 1, [callback](const std::string& res) {
             callback((uint8_t)res[0] & 0x40);
@@ -79,8 +66,9 @@ protected:
     virtual void read_finished(std::function<void(bool)> callback) override
     {
         // NOTE: this is *not* the check used for speedruns. speedrun time is when carltron has 0 HP
+        // this flag is set when inside outro (after the dialog with Sydney)
         // this function will only be called when in-game detection succeeded
-        _snes->read_memory(0x7e22f3, 1, [callback](const std::string& res) {
+        _snes->read_memory(0x7e22f1, 1, [callback](const std::string& res) {
             callback((uint8_t)res[0] & 0x40);
         });
     }

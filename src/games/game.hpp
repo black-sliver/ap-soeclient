@@ -69,6 +69,7 @@ public:
 
     virtual void clear_cache() {
         _cache.clear();
+        if (_state == State::FINISHED) _state = State::JOINED;
     }
 
     virtual void poll()

@@ -7,12 +7,11 @@ This is still in beta, but should mostly work.
 ## How does it work
 
 It compiles to WASM+JS and runs in your browser.
-URL where it's gonna live is yet to be determined.
 
 ## How to use it
 
-Until it's hosted publicly, you can build it (or download a release) and host
-it on `http://localhost:8000` using `serve.py`.
+You can build it (or download a release) and host it on `http://localhost:8000`
+using `serve.py`. Or visit an URL that hosts it.
 
 The page will automatically connect to your SNI if running.
 Use `/connect <host>` command to connect to the AP server.
@@ -20,6 +19,15 @@ Use `/connect <host>` command to connect to the AP server.
 ## How to build it
 
 see `build.sh`
+
+## Local storage
+
+* The client will store a random ID in local storage to be able to replace the
+  previous connection from the same browser (crash or lost connectivity).
+  * this ID is only used between the application and the Archipelago server
+  * the http server hosting the client does not store anything from the client
+* The client may store a cache of item and location names to reduce traffic.
+* The local storage can be cleared at any time through browser features.
 
 ## TODO
 
@@ -29,3 +37,10 @@ see `build.sh`
   * connecting to AP host clears the cached Goal status, so
   * be connected to AP host while the outro is running
   * or connect to AP host with the outro still running
+* make sure to clear state when host/rom changes
+* stop auto-scrolling if manually scrolled
+* don't enable force-send on connect, instead add /force or something
+  * when reconnect the first item may be sent while another one is in transit
+* add text colors
+* https-http-wss-ws notice or switch-over
+* some text clean-up

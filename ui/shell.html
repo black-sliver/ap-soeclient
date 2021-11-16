@@ -98,11 +98,10 @@
       }
 
       function toggle_debug() {
-        if (debugStyle.innerHTML === "") hide_debug();
-        else show_debug();
+        if (document.getElementById("debug").checked) show_debug();
+        else hide_debug();
       }
-      if (document.getElementById("debug").checked) show_debug();
-      else hide_debug();
+      toggle_debug();
     </script>
     <script type="text/javascript">
       var statusElement = document.getElementById('status');

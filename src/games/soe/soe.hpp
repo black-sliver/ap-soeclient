@@ -87,6 +87,7 @@ protected:
 
     virtual void poll() override
     {
+        // NOTE: see NOTE in Game::poll()
         if (!_snes->idle()) return;
         Game::poll();
         // send out item(s) if possible
@@ -94,9 +95,9 @@ protected:
             auto t = now();
             if (t - _lastSent < 2000) return; // only send an item every 2sec
             _lastSent = t;
-            // TODO: verify seed/slot again?
             _snes->read_memory(0x7e2575, 9, [this](const std::string& res) { // read expected_index and receive busy
                 if (res.size() < 9) return; // TODO: print error?
+                if (get_state() != State::JOINED) return; // changed state during Game::poll()
                 // FIXME: if this gets destroyed without _snes getting destroyed this is a bad memory access.
                 // we need to cancel this callback on delete
                 uint16_t expect = (uint8_t)res[1];
@@ -133,6 +134,7 @@ protected:
     {
         // ignore receive lock for the first item after loading
         // and hope this never breaks anything
+        // TODO: instead add a /force command to main?
         _ignoreSendLock = true;
     }
     

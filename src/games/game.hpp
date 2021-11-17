@@ -74,6 +74,11 @@ public:
 
     virtual void poll()
     {
+        // NOTE: if reads are queued, we need to double-check a lot of
+        //       state in the callbacks. Not polling while busy actually
+        //       reduce the amount of state we have to check, since we
+        //       can't change state randomly, but better safe than sorry,
+        //       so we leave all checks in.
         if (!_snes->idle()) return;
         auto t = now();
         if (_state == State::STOPPED) {
@@ -83,6 +88,8 @@ public:
                     _snes->get_state() == USB2SNES::State::SNES_CONNECTED) {
                 read_seed_and_slot([this](const std::string& seed, const std::string& slot){
                     if (!seed.empty() && !slot.empty()) {
+                        if (seed == _seed && slot == _slot && _state >= State::RUNNING)
+                            return; // already done
                         _seed = seed;
                         _slot = slot;
                         _state = State::RUNNING;
@@ -101,6 +108,10 @@ public:
                 read_seed_and_slot([this](const std::string& seed, const std::string& slot) {
                     if (seed != _seed || slot != _slot) {
                         _state = State::STOPPED;
+                        _seed.clear();
+                        _slot.clear();
+                        invalidate_pending_read();
+                        log("stopped, game, slot or seed changed");
                         if (_hOnGameStopped) _hOnGameStopped();
                     } else {
                         read_joined([this](bool res) {
@@ -108,6 +119,8 @@ public:
                                 _state = State::JOINED;
                                 on_game_joined();
                                 if (_hOnGameJoined) _hOnGameJoined();
+                            } else {
+                                invalidate_pending_read();
                             }
                         });
                     }
@@ -118,22 +131,20 @@ public:
         else {
             // TODO: different interval for timeout and read complete,
             //       or better detect if read was cancelled
-            // NOTE: switching state back to RUNNING is done by detecting "bad"
-            //       reads (read_joined returning false)
-            // FIXME: not rereading seed/slot may be a race for some games
-            // TODO: reread slot and seed, this seems to be required for evermore
             if (t - _lastLocationPoll >= LOCATION_POLL_INTERVAL && 
                     _snes->get_state() == USB2SNES::State::SNES_CONNECTED) {
                 if (_addressCache.empty()) makeAddressCache();
                 // read "joined" detection
                 read_joined([this](bool res) {
-                    _readBuffer.clear();
-                    _finishedBuffer = false;
-                    _readBufferValid = res;
-                    if (!res) {
+                    invalidate_pending_read();
+                    if (!res && _state > State::RUNNING) {
                         _state = State::RUNNING;
                         // TODO: cancel all pending reads?
                         if (_hOnGameLeft) _hOnGameLeft();
+                    } else if (_state < State::JOINED) {
+                        return; // already detected reset/rom change
+                    } else {
+                        _readBufferValid = res;
                     }
                 });
                 // read all values of interest to a buffer
@@ -141,25 +152,36 @@ public:
                     auto addr = pair.first;
                     auto len = pair.second;
                     _snes->read_memory(addr, len, [this,addr,len](const std::string& data) {
-                        //printf("$%06x:%u = ", addr, len);
                         for (uint32_t i=0; i<len; i++) {
-                            //printf("0x%02hhx ", (uint8_t)data[i]);
                             _readBuffer[addr+i] = (uint8_t)data[i];
                         }
-                        //printf("\n");
                     });
                 }
                 // read "finished" detection
                 read_finished([this](bool res) {
                     _finishedBuffer = res;
                 });
+                // verify rom by reading seed and slot
+                read_seed_and_slot([this](const std::string& seed, const std::string& slot) {
+                    if (!seed.empty() && seed == _seed && !slot.empty() && slot == _slot) return; // OK
+                    invalidate_pending_read();
+                    if (_state == State::JOINED) {
+                        _state = State::RUNNING;
+                        if (_hOnGameLeft) _hOnGameLeft();
+                    }
+                    if (_state == State::RUNNING) {
+                        _state = State::STOPPED;
+                        log("stopped, game, slot or seed changed");
+                        if (_hOnGameStopped) _hOnGameStopped();
+                    }
+                });
                 // read "joined" detection again, and apply values
                 read_joined([this](bool res) {
                     if (_state < State::JOINED) return;
                     if (!res) {
+                        invalidate_pending_read();
                         _state = State::RUNNING;
                         if (_hOnGameLeft) _hOnGameLeft();
-                        _readBufferValid = false;
                     } else if (_readBufferValid) {
                         std::list<int> locationsChecked;
                         std::list<int> locationsScouted;
@@ -196,6 +218,7 @@ public:
                             _state = State::FINISHED;
                             if (_hOnGameFinished) _hOnGameFinished();
                         }
+                        invalidate_pending_read();
                     }
                 });
                 _lastLocationPoll = t;
@@ -302,6 +325,13 @@ private:
             if (it->second == 0) it = _addressCache.erase(it);
             else ++it;
         }
+    }
+
+    void invalidate_pending_read()
+    {
+        _readBuffer.clear();
+        _finishedBuffer = false;
+        _readBufferValid = false;
     }
 
     unsigned long _lastLocationPoll = 0;

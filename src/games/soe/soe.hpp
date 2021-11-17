@@ -87,6 +87,7 @@ protected:
 
     virtual void poll() override
     {
+        if (!_snes->idle()) return;
         Game::poll();
         // send out item(s) if possible
         if (get_state() == State::JOINED) {

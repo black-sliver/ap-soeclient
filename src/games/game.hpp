@@ -74,6 +74,7 @@ public:
 
     virtual void poll()
     {
+        if (!_snes->idle()) return;
         auto t = now();
         if (_state == State::STOPPED) {
             // TODO: different interval for timeout and read complete,

@@ -104,6 +104,11 @@ public:
         }
     }
 
+    bool idle()
+    {
+        return (_state == State::SNES_CONNECTED && _txQueue.empty());
+    }
+
     void set_socket_connected_handler(std::function<void(void)> f)
     {
         _hOnSocketConnected = f;

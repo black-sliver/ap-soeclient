@@ -10,6 +10,9 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#define UUID_FILE "/settings/uuid"
+#else
+#define UUID_FILE "uuid" // TODO: place in %appdata%
 #endif
 
 
@@ -37,11 +40,7 @@ static std::string get_uuid()
 {
     char uuid[33]; uuid[32] = 0;
 #if defined USE_IDBFS || !defined __EMSCRIPTEN__
-    #ifdef __EMSCRIPTEN__
-    std::string uuidFile = "/settings/uuid";
-    #else
-    std::string uuidFile = "uuid"; // TODO: place in APPDATA
-    #endif
+    std::string uuidFile = UUID_FILE;
     //uuidFile += "." + GAME::Name; // different UUIDs for different games?
     FILE* f = fopen(uuidFile.c_str(), "rb");
     size_t n = 0;

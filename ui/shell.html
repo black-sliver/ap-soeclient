@@ -14,6 +14,7 @@
       div#output { overflow-y:scroll; overflow-x:visible; overflow-wrap: break-word; white-space: pre-wrap; }
       #status { padding:0px 4px 3px;}
       .debug { color: #9c9c9c; }
+      .exception { color: #f65; font-size: 1.2em; }
       
       .spinner {
         height: 50px;
@@ -165,20 +166,22 @@
             if (!text) spinnerElement.hidden = true;
           }
           statusElement.innerHTML = text;
-        },
-        totalDependencies: 0,
-        monitorRunDependencies: function(left) {
-          this.totalDependencies = Math.max(this.totalDependencies, left);
-          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
         }
       };
       Module.setStatus('Downloading...');
-      window.onerror = function() {
-        Module.setStatus('Exception thrown, see JavaScript console');
-        spinnerElement.style.display = 'none';
-        Module.setStatus = function(text) {
-          if (text) Module.printErr('[post-exception status] ' + text);
-        };
+      window.onerror = function(msg,f,ln,col,e) {
+        if (e == 'WSS not supported') {
+            document.getElementById('stdin').disabled = true;
+            var url = document.location.href.replace("https:","http:");
+            document.getElementById('output').insertAdjacentHTML('beforeend',
+                ' <span class="exception">SSL not yet supported by AP websocket. Please use the <a href="'+url+'">http version</a>.');
+        } else {
+            Module.setStatus('Exception thrown, see JavaScript console');
+            spinnerElement.style.display = 'none';
+            Module.setStatus = function(text) {
+              if (text) Module.printErr('[post-exception status] ' + text);
+            };
+        }
       };
     </script>
     {{{ SCRIPT }}}

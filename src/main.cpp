@@ -323,6 +323,12 @@ void on_command(const std::string& command)
 
 int main(int argc, char** argv)
 {
+#ifdef __EMSCRIPTEN__
+    EM_ASM({
+        if (document.location.protocol == 'https:')
+            throw 'WSS not supported';
+    });
+#endif
 #ifdef USE_IDBFS
     // mount persistant storage, then run app
     EM_ASM({

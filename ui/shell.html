@@ -111,9 +111,13 @@
       var Module = {
         preRun: [],
         postRun: [],
+        autoscroll: true,
         print: (function() {
           var element = document.getElementById('output');
           if (element) element.value = ''; // clear browser cache
+          element.addEventListener('scroll', function() {
+            Module.autoscroll = element.scrollTop + element.clientHeight >= element.scrollHeight - 1;
+          });
           return function(text) {
             if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
             // These replacements are necessary if you render to raw HTML
@@ -132,7 +136,8 @@
                 text = text + '\n';
               element.insertAdjacentHTML('beforeend', text);
             }
-            element.scrollTop = element.scrollHeight; // focus on bottom
+            if (Module.autoscroll)
+              element.scrollTop = element.scrollHeight; // focus on bottom
           };
         })(),
         printErr: function(text) {

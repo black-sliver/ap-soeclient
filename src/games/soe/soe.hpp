@@ -130,12 +130,11 @@ protected:
         }
     }
     
-    virtual void on_game_joined() override
+    virtual bool force_send() override
     {
-        // ignore receive lock for the first item after loading
-        // and hope this never breaks anything
-        // TODO: instead add a /force command to main?
+        // ignore part of the receive lock for the next item
         _ignoreSendLock = true;
+        return true;
     }
     
     virtual void clear_cache() override
@@ -151,7 +150,7 @@ private:
     std::map<int, int> _receivedItems;
     int _lastItemIndex = -1;
     unsigned long _lastSent = 0;
-    bool _ignoreSendLock = true;
+    bool _ignoreSendLock = false;
     static constexpr auto CART_HEADER = "SECRET OF EVERMORE   \x31\x02\x0c\x03\x01\x33\x00";
     static constexpr size_t CART_HEADER_LOC = 0xFFC0;
     static constexpr size_t CART_HEADER_LEN = 28;

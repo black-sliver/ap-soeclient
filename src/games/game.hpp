@@ -275,6 +275,8 @@ public:
 
     virtual void send_item(int index, int id, const std::string& sender, const std::string& location) = 0;
 
+    virtual bool force_send() { return false; }
+
 protected:    
     void log(const char* s)
     {

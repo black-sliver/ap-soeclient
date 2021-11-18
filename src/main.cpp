@@ -312,6 +312,9 @@ void on_command(const std::string& command)
     } else if (command == "/sync") {
         if (game) game->clear_cache();
         if (ap) ap->Sync();
+    } else if (command == "/force-send") {
+        if (!game) printf("Can't force-send if game is not running.\n");
+        else if (!game->force_send()) printf("Game does not support force-send.\n");
     } else if (command.find("/") == 0) {
         printf("Unknown command: %s\n", command.c_str());
     } else if (!ap) {

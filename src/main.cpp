@@ -43,6 +43,11 @@ bool ap_sync_queued = false;
 USB2SNES* snes = nullptr;
 Game* game = nullptr;
 
+#ifdef __EMSCRIPTEN__
+#define DATAPACKAGE_CACHE "/settings/datapackage.json"
+#else
+#define DATAPACKAGE_CACHE "datapackage.json" // TODO: place in %appdata%
+#endif
 
 void set_status_color(const std::string& field, const std::string& color)
 {
@@ -89,7 +94,27 @@ void connect_ap(std::string uri="")
     // clear game's cache. read below on socket_connected_handler
     if (game) game->clear_cache();
 
-    // TODO: ap->load_data_package(...); // from cache
+    // load DataPackage cache
+    FILE* f = fopen(DATAPACKAGE_CACHE, "rb");
+    if (f) {
+        char* buf = nullptr;
+        size_t len = (size_t)0;
+        if ((0 == fseek(f, 0, SEEK_END)) &&
+            ((len = ftell(f)) > 0) &&
+            ((buf = (char*)malloc(len+1))) &&
+            (0 == fseek(f, 0, SEEK_SET)) &&
+            (len == fread(buf, 1, len, f)))
+        {
+            buf[len] = 0;
+            try {
+                ap->set_data_package(json::parse(buf));
+            } catch (std::exception) { /* ignore */ }
+        }
+        free(buf);
+        fclose(f);
+    }
+
+    // set state and callbacks
     ap_sync_queued = false;
     set_status_color("ap", "#ff0000");
     ap->set_socket_connected_handler([](){
@@ -144,7 +169,17 @@ void connect_ap(std::string uri="")
         }
     });
     ap->set_data_package_changed_handler([](const json& data) {
-        // TODO: dump data to a cache
+        FILE* f = fopen(DATAPACKAGE_CACHE, "wb");
+        if (f) {
+            std::string s = data.dump();
+            fwrite(s.c_str(), 1, s.length(), f);
+            fclose(f);
+            #ifdef __EMSCRIPTEN__
+            EM_ASM(
+                FS.syncfs(function (err) {});
+            );
+            #endif
+        }
     });
     ap->set_print_handler([](const std::string& msg) {
         printf("%s\n", msg.c_str());

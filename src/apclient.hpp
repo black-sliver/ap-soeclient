@@ -452,6 +452,7 @@ private:
                     _dataPackageValid = true;
                     std::list<std::string> exclude;
                     for (auto itV: command["datapackage_versions"].items()) {
+                        if (!itV.value().is_number()) continue;
                         int v = itV.value().get<int>();
                         if (v < 1) {
                             // 0 means don't cache
@@ -473,6 +474,7 @@ private:
                         exclude.push_back(itV.key());
                     }
                     if (!_dataPackageValid) GetDataPackage(exclude);
+                    else debug("DataPackage up to date");
                 }
                 else if (cmd == "ConnectionRefused") {
                     if (_hOnSlotRefused) {
@@ -527,7 +529,9 @@ private:
                 else if (cmd == "DataPackage") {
                     for (auto gamepair: command["data"]["games"].items()) {
                         const auto& gamedata = gamepair.value();
-                        _dataPackage[gamepair.key()] = gamedata;
+                        if (!_dataPackage["games"].is_object())
+                            _dataPackage["games"] = json(json::value_t::object);
+                        _dataPackage["games"][gamepair.key()] = gamedata;
                         for (auto pair: gamedata["item_name_to_id"].items()) {
                             _items[pair.value().get<int>()] = pair.key();
                         }

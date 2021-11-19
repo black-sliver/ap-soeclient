@@ -156,6 +156,16 @@ public:
         // only apply from cache if not updated and it looks valid
         if (!_dataPackageValid && data.find("games") != data.end()) {
             _dataPackage = data;
+            for (auto gamepair: _dataPackage["games"].items()) {
+                const auto& gamedata = gamepair.value();
+                _dataPackage["games"][gamepair.key()] = gamedata;
+                for (auto pair: gamedata["item_name_to_id"].items()) {
+                    _items[pair.value().get<int>()] = pair.key();
+                }
+                for (auto pair: gamedata["location_name_to_id"].items()) {
+                    _locations[pair.value().get<int>()] = pair.key();
+                }
+            }
         }
     }
 
@@ -527,19 +537,14 @@ private:
                     // ignored at the moment
                 }
                 else if (cmd == "DataPackage") {
-                    for (auto gamepair: command["data"]["games"].items()) {
-                        const auto& gamedata = gamepair.value();
-                        if (!_dataPackage["games"].is_object())
-                            _dataPackage["games"] = json(json::value_t::object);
-                        _dataPackage["games"][gamepair.key()] = gamedata;
-                        for (auto pair: gamedata["item_name_to_id"].items()) {
-                            _items[pair.value().get<int>()] = pair.key();
-                        }
-                        for (auto pair: gamedata["location_name_to_id"].items()) {
-                            _locations[pair.value().get<int>()] = pair.key();
-                        }
-                    }
-                    _dataPackage["version"] = command["data"]["version"];
+                    auto data = _dataPackage;
+                    if (!data["games"].is_object())
+                        data["games"] = json(json::value_t::object);
+                    for (auto gamepair: command["data"]["games"].items())
+                        data["games"][gamepair.key()] = gamepair.value();
+                    data["version"] = command["data"]["version"];
+                    _dataPackageValid = false;
+                    set_data_package(data);
                     _dataPackageValid = true;
                     if (_hOnDataPackageChanged) _hOnDataPackageChanged(_dataPackage);
                 }

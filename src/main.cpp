@@ -264,6 +264,9 @@ void disconnect_ap()
 
 void start()
 {
+#ifndef __EMSCRIPTEN__ // HTML GUI has its own log
+    // TODO: create log and redirect stdout
+#endif
     // read or generate uuid, required by AP
     std::string uuid = get_uuid();
     printf("UUID: %s\n", uuid.c_str());

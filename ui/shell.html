@@ -73,6 +73,7 @@
     <div id="output"></div>
     <div>Command: &nbsp; <input type="text" id="stdin" onkeydown="command_key(this)"/>
          <div style="float:right">
+            <a id="dump" href="#" style="display:none">Log</a> &nbsp;
             <a href="https://github.com/black-sliver/ap-soeclient/">Readme</a> &nbsp;
             <input type="checkbox" id="debug" onclick="toggle_debug(this)"/>
             <label for="debug">Debug</label>
@@ -103,6 +104,76 @@
         else hide_debug();
       }
       toggle_debug();
+
+      var stamp_num = -1;
+      var stamp_last_now = 0;
+      function stamp() {
+        // create a (hopefully) unique key for logging
+        var now = Date.now();
+        if (stamp_last_now != now) stamp_num = -1;
+        stamp_num++;
+        return Date.now().toString() + '.' + stamp_num;
+      }
+
+      var log = function(text) {}
+      var log_db_req = window.indexedDB.open("log");
+      log_db_req.onupgradeneeded = function(ev) {
+        var db = ev.target.result;
+        var store = db.createObjectStore("log", { autoIncrement : true });
+        store.createIndex("time", "time", { unique: false });
+        store.transaction.oncomplete = function(event) { log("log store created"); }
+      }
+      log_db_req.onsuccess = function(ev) {
+        // delete everything more than 24hrs ago
+        var db = ev.target.result;
+        db.transaction(["log"], "readwrite").objectStore("log")
+          .index("time")
+          .openCursor(IDBKeyRange.upperBound(new Date()-86400000))
+          .onsuccess = function (ev) {
+            var cur = ev.target.result;
+            if (!cur) return;
+            cur.delete();
+            cur.continue();
+        }
+        var dump = document.getElementById('dump');
+        dump.onclick = function() {
+          var s = '';
+          db.transaction(["log"], "readwrite").objectStore("log")
+            .index("time")
+            .openCursor()
+            .onsuccess = function (ev) {
+            var cur = ev.target.result;
+            if (cur) {
+              s += cur.value.time + ': ' + cur.value.text + '\n';
+              cur.continue();
+            } else {
+              // done. download string as blob
+              var fn = 'log.txt';
+              var blob = new Blob([s], {type: 'text/plain'});
+              if(window.navigator.msSaveOrOpenBlob) {
+                window.navigator.msSaveBlob(blob, fn);
+              } else {
+                var el = window.document.createElement('a');
+                el.href = window.URL.createObjectURL(blob);
+                el.download = fn;
+                document.body.appendChild(el);
+                el.click();
+                document.body.removeChild(el);
+              }
+            }
+          };
+        };
+        dump.style.display = 'inline';
+        // create log function to indexdb
+        log = function(text) {
+          db.transaction(["log"], "readwrite").objectStore("log")
+            .add({ time: Date.now(), text: text})
+            .onsuccess = function(ev) { /* done */ }
+        }
+      }
+      log_db_req.onerror = function(ev) {
+        console.error('indexDB not available: '+log_db_req.errorCode);
+      }
     </script>
     <script type="text/javascript">
       var statusElement = document.getElementById('status');
@@ -127,6 +198,7 @@
             text = text.replace(/>/g, "&gt;");
             text = text.replace('\n', '<br>', 'g');
             console.log(text);
+            log(text);
             if (element.tagName.toUpperCase() == 'TEXTAREA') {
               element.value += text + "\n";
             } else {
@@ -144,6 +216,7 @@
         printErr: function(text) {
           if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
           console.error(text);
+          log(text);
         },
         setStatus: function(text) {
           if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
@@ -169,7 +242,9 @@
         }
       };
       Module.setStatus('Downloading...');
-      window.onerror = function(msg,f,ln,col,e) {
+      window.onerror = function(text,f,ln,col,e) {
+        console.error(text);
+        log(text);
         if (e == 'WSS not supported') {
             document.getElementById('stdin').disabled = true;
             var url = document.location.href.replace("https:","http:");

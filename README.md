@@ -25,8 +25,8 @@ see `build.sh`
 * The client will store a random ID in local storage to be able to replace the
   previous connection from the same client (crash or lost connectivity).
   This ID is only shared between the client and the AP server `/connect`ed to.
-* The client may store a cache of item and location names to reduce traffic.
-* The client may store the last session log.
+* The client stores a cache of item and location names to reduce traffic.
+* The client may store the last 24hrs of output to a log.
 * The http server hosting the client does not store any of that.
 * The local storage can be cleared at any time through browser features.
 

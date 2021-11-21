@@ -42,8 +42,9 @@ if [[ "$1" != "debug" ]]; then
   mv "$BUILD_DIR/$NAME.min.html" "$BUILD_DIR/index.html" # this may change with version selection in the future
   cp "util/htaccess" "$BUILD_DIR/.htaccess" # copy .htaccess that automagically serves pre-compressed wasm, js and css
   cp "util/serve.py" "$BUILD_DIR/" # copy serve.py to build output
-  # copy licenses
+  # copy licenses & readme
   cp "LICENSE" "$BUILD_DIR/"
+  cp "README.md" "$BUILD_DIR/"
   echo -e "# ap-soeclient\n" >> "$BUILD_DIR/CREDITS"
   echo "see LICENSE file" >> "$BUILD_DIR/CREDITS"
   echo -e "\n" >> "$BUILD_DIR/CREDITS"

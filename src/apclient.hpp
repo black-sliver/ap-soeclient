@@ -89,6 +89,7 @@ public:
         std::string type;
         std::string color;
         std::string text;
+        bool found = false;
     };
 
     void set_socket_connected_handler(std::function<void(void)> f)
@@ -193,22 +194,51 @@ public:
         if (it != _items.end()) return it->second;
         return "Unknown";
     }
-    
+
     std::string render_json(const std::list<TextNode>& msg, RenderFormat fmt=RenderFormat::TEXT)
     {
-        // TODO: implement RenderFormat::HTML, RenderFormat::ANSI
+        // TODO: implement RenderFormat::HTML
+        if (fmt == RenderFormat::HTML)
+            throw std::invalid_argument("AP::render_json(..., HTML) not implemented");
         std::string out;
+        bool colorIsSet = false;
         for (const auto& node: msg) {
+            std::string color;
+            std::string text;
+            if (fmt != RenderFormat::TEXT) color = node.color;
             if (node.type == "player_id") {
-                out += get_player_alias(std::stoi(node.text));
+                int id = std::stoi(node.text);
+                if (color.empty() && id == _slotnr) color = "magenta";
+                else if (color.empty()) color = "yellow";
+                text = get_player_alias(id);
             } else if (node.type == "item_id") {
-                out += get_item_name(std::stoi(node.text));
+                int id = std::stoi(node.text);
+                if (color.empty() && node.found) color = "green";
+                else if (color.empty()) color = "cyan";
+                text = get_item_name(id);
             } else if (node.type == "location_id") {
-                out += get_location_name(std::stoi(node.text));
+                int id = std::stoi(node.text);
+                if (color.empty()) color = "blue";
+                text = get_location_name(id);
             } else {
-                out += node.text;
+                text = node.text;
+            }
+            if (fmt == RenderFormat::ANSI) {
+                if (color.empty() && colorIsSet) {
+                    out += color2ansi(""); // reset color
+                    colorIsSet = false;
+                }
+                else if (!color.empty()) {
+                    out += color2ansi(color);
+                    colorIsSet = true;
+                }
+                deansify(text);
+                out += text;
+            } else {
+                out += text;
             }
         }
+        if (fmt == RenderFormat::ANSI && colorIsSet) out += color2ansi("");
         return out;
     }
 
@@ -557,10 +587,12 @@ private:
                         auto itType = part.find("type");
                         auto itColor = part.find("color");
                         auto itText = part.find("text");
+                        auto itFound = part.find("found");
                         msg.push_back({
                             itType == part.end() ? "" : itType->get<std::string>(),
                             itColor == part.end() ? "" : itColor->get<std::string>(),
                             itText == part.end() ? "" : itText->get<std::string>(),
+                            itFound == part.end() ? false : itFound->get<bool>(),
                         });
                     }
                     if (_hOnPrintJson) _hOnPrintJson(msg);
@@ -604,6 +636,24 @@ private:
         // allowed rate once we are over it
         unsigned long maxReconnectInterval = std::max(15000UL, _ws->get_ok_connect_interval());
         if (_socketReconnectInterval > maxReconnectInterval) _socketReconnectInterval = maxReconnectInterval;
+    }
+
+    std::string color2ansi(const std::string& color)
+    {
+        // convert color to ansi color command
+        if (color == "red") return "\x1b[31m";
+        if (color == "green") return "\x1b[32m";
+        if (color == "yellow") return "\x1b[33m";
+        if (color == "blue") return "\x1b[34m";
+        if (color == "magenta") return "\x1b[35m";
+        if (color == "cyan") return "\x1b[36m";
+        return "\x1b[0m";
+    }
+
+    void deansify(std::string& text)
+    {
+        // disable ansi commands in text by replacing ESC by space
+        std::replace(text.begin(), text.end(), '\x1b', ' ');
     }
 
     static unsigned long now()

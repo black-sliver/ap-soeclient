@@ -54,6 +54,13 @@
       body > div#output {
         flex: 1;
       }
+
+      .ansi31 { color: #f87; }
+      .ansi32 { color: #7f8; }
+      .ansi33 { color: #ff4; }
+      .ansi34 { color: #79f; }
+      .ansi35 { color: #f5f; }
+      .ansi36 { color: #5ff; }
     </style>
   </head>
   <body>
@@ -174,6 +181,33 @@
       log_db_req.onerror = function(ev) {
         console.error('indexDB not available: '+log_db_req.errorCode);
       }
+
+      function ansi2html(s) {
+        var p = s.split('\x1b[');
+        s = p.shift();
+        var tagOpen = false;
+        p.forEach(function(t) {
+            if (t.startsWith('0m') || t.startsWith('m')) {
+                if (tagOpen) s += '</span>'
+                s += t[0]=='0' ? t.substr(2) : t.substr(1);
+                tagOpen = false;
+            } else {
+                var n = 1;
+                while (t[n] != 'm') n++; // find closing 'm'
+                var fmt = t.substr(0, n).replace('"', '');
+                t = t.substr(n+1);
+                s += '<span class="ansi' + fmt + '">' + t;
+                tagOpen = true;
+            }
+        });
+        if (tagOpen) s += '</span>';
+        return s;
+      }
+
+      function deansify(s) {
+        // remove ansi commands for logging/browser console
+        return s.replace(/\x1b\[.*?m/g, '');
+      }
     </script>
     <script type="text/javascript">
       var statusElement = document.getElementById('status');
@@ -192,17 +226,18 @@
           });
           return function(text) {
             if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+            var raw = deansify(text);
+            console.log(raw);
+            log(raw);
             // These replacements are necessary if you render to raw HTML
             text = text.replace(/&/g, "&amp;");
             text = text.replace(/</g, "&lt;");
             text = text.replace(/>/g, "&gt;");
             text = text.replace('\n', '<br>', 'g');
-            console.log(text);
-            log(text);
             if (element.tagName.toUpperCase() == 'TEXTAREA') {
-              element.value += text + "\n";
+              element.value += deansify(text) + "\n";
             } else {
-              // TODO: allow coloring from AP
+              text = ansi2html(text);
               if (text.startsWith("APClient:") || text.startsWith("USB2SNES:") || text.startsWith("Game:") || text.startsWith("UUID:"))
                 text = '<span class="debug">' + text + '\n</span>';
               else

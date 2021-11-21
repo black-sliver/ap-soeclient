@@ -41,5 +41,4 @@ see `build.sh`
   * connecting to AP host clears the cached Goal status, so
   * be connected to AP host while the outro is running
   * or connect to AP host with the outro still running
-* add text colors
 * some text clean-up

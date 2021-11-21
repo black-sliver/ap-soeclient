@@ -58,13 +58,13 @@ public:
     {
         // either this or the destructor should be called if the connection is lost
         clear_cache();
-        _readBufferValid = false;
+        invalidate_pending_read();
+        _seed.clear();
+        _slot.clear();
         if (_state != State::STOPPED) {
             _state = State::STOPPED;
             if (_hOnGameStopped) _hOnGameStopped();
         }
-        _seed.clear();
-        _slot.clear();
     }
 
     virtual void clear_cache() {
@@ -79,6 +79,9 @@ public:
         //       reduce the amount of state we have to check, since we
         //       can't change state randomly, but better safe than sorry,
         //       so we leave all checks in.
+        // NOTE: there is still potential to trigger checks when ram is
+        //       filled with garbage/all 1s, but the rom is already
+        //       loaded.
         if (!_snes->idle()) return;
         auto t = now();
         if (_state == State::STOPPED) {
@@ -106,6 +109,7 @@ public:
             if (t - _lastJoinedCheck >= JOINED_CHECK_INTERVAL &&
                     _snes->get_state() == USB2SNES::State::SNES_CONNECTED) {
                 read_seed_and_slot([this](const std::string& seed, const std::string& slot) {
+                    invalidate_pending_read();
                     if (seed != _seed || slot != _slot) {
                         _state = State::STOPPED;
                         _seed.clear();
@@ -115,12 +119,12 @@ public:
                         if (_hOnGameStopped) _hOnGameStopped();
                     } else {
                         read_joined([this](bool res) {
-                            if (res) {
+                            invalidate_pending_read();
+                            if (res && _state < State::JOINED) {
+                                log("joined/loaded save");
                                 _state = State::JOINED;
                                 on_game_joined();
                                 if (_hOnGameJoined) _hOnGameJoined();
-                            } else {
-                                invalidate_pending_read();
                             }
                         });
                     }

@@ -16,6 +16,10 @@ using `serve.py`. Or visit an URL that hosts it.
 The page will automatically connect to your SNI if running.
 Use `/connect <host>` command to connect to an AP server.
 
+The game can very rarely desync receiving items. When everything is green,
+the client receives items, but the game does not, while in a room/scene that
+should be able to receive items, use `/force-send` command to ignore the lock.
+
 ## How to build it
 
 see `build.sh`
@@ -37,9 +41,5 @@ see `build.sh`
   * connecting to AP host clears the cached Goal status, so
   * be connected to AP host while the outro is running
   * or connect to AP host with the outro still running
-* don't enable force-send on connect, instead add /force or something
-  * when reconnect the first item may be sent while another one is in transit
 * add text colors
-* https-http-wss-ws notice or switch-over
 * some text clean-up
-* store last log

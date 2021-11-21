@@ -292,7 +292,7 @@ public:
         return false;
     }
 
-    bool ConnectSlot(const std::string& name, const std::string& password="")
+    bool ConnectSlot(const std::string& name, const std::string& password="", int ver_ma=0, int ver_mi=1, int ver_build=99)
     {
         if (_state < State::SOCKET_CONNECTED) return false;
         _slot = name;
@@ -303,7 +303,7 @@ public:
             {"uuid", _uuid},
             {"name", name},
             {"password", password},
-            {"version", {{"major", 0}, {"minor", 1}, {"build", 5}, {"class", "Version"}}},
+            {"version", {{"major", ver_ma}, {"minor", ver_mi}, {"build", ver_build}, {"class", "Version"}}},
             {"tags", json::array()},
         }};
         debug("> " + packet[0]["cmd"].get<std::string>() + ": " + packet.dump());

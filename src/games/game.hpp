@@ -80,8 +80,7 @@ public:
         //       can't change state randomly, but better safe than sorry,
         //       so we leave all checks in.
         // NOTE: there is still potential to trigger checks when ram is
-        //       filled with garbage/all 1s, but the rom is already
-        //       loaded.
+        //       filled with garbage since we read seed/slot from rom.
         if (!_snes->idle()) return;
         auto t = now();
         if (_state == State::STOPPED) {

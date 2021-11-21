@@ -55,11 +55,14 @@ protected:
 
     virtual void read_joined(std::function<void(bool)> callback) override
     {
-        // this will flag is set when entering the jungle after intro cutscene/fight,
-        // even if the intro/fight is skipped
+        // 22ab&0x40 is set when entering the jungle after intro cutscene/fight,
+        // even if the intro/fight is skipped.
+        // 22ab&0x30 is unused and cleared to 0.
+        // We need to check bits for 1 and anothers for 0 to detect garbage/all 1/all 0.
+        // Below check is still a 1 in in 8 chance to accept garbage as joined.
         if (_snes->get_state() != USB2SNES::State::SNES_CONNECTED) callback(false);
         _snes->read_memory(0x7e22ab, 1, [callback](const std::string& res) {
-            callback((uint8_t)res[0] & 0x40);
+            callback(((uint8_t)res[0] & 0x70) == 0x40);
         });
     }
 

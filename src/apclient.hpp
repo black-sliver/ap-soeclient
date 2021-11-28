@@ -32,9 +32,25 @@ protected:
 public:
     APClient(const std::string& uuid, const std::string& game, const std::string& uri="ws://localhost:38281")
     {
+        // fix up URI (add ws:// and default port if none is given)
+        // TODO: move this to the front-end once we have wss:// and ws://
+        //       or multiple rooms on the same port
+        auto p = uri.find("://");
+        if (p == uri.npos) {
+            _uri = "ws://" + uri;
+            p = 2;
+        } else {
+            _uri = uri;
+        }
+        auto pColon = _uri.find(":", p+3);
+        auto pSlash = _uri.find("/", p+3);
+        if (pColon == _uri.npos || (pSlash != _uri.npos && pColon > pSlash)) {
+            auto tmp = _uri.substr(0, pSlash) + ":38281";
+            if (pSlash != _uri.npos) tmp += _uri.substr(pSlash);
+            _uri = tmp;
+        }
         _uuid = uuid;
         _game = game;
-        _uri = uri;
         _dataPackage = {
             {"version", -1},
             {"games", json(json::value_t::object)},

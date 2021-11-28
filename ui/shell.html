@@ -179,7 +179,7 @@
         }
       }
       log_db_req.onerror = function(ev) {
-        console.error('indexDB not available: '+log_db_req.errorCode);
+        console.error('indexDB not available: '+log_db_req.error);
       }
 
       function ansi2html(s) {

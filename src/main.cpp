@@ -327,7 +327,7 @@ void on_command(const std::string& command)
         else if (!game->force_send()) printf("Game does not support force-send.\n");
     } else if (command.find("/") == 0) {
         printf("Unknown command: %s\n", command.c_str());
-    } else if (!ap) {
+    } else if (!ap || ap->get_state() < APClient::State::SOCKET_CONNECTED) {
         printf("AP not connected. Can't send chat message.\n");
         if (command.length() >= 2 && command[1] == '/') {
             printf("Did you mean \"%s\"?\n", command.substr(1).c_str());

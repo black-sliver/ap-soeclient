@@ -98,15 +98,23 @@ protected:
             auto t = now();
             if (t - _lastSent < 2000) return; // only send an item every 2sec
             _lastSent = t;
-            _snes->read_memory(0x7e2575, 9, [this](const std::string& res) { // read expected_index and receive busy
-                if (res.size() < 9) return; // TODO: print error?
+            // TODO: if (_lockVersion > 2) data is written to SRAM
+            // NOTE: by default scripts can not clear SRAM. That's why this
+            //       solution was avoided in the first version.
+            _snes->read_memory(0x7e2575, 10, [this](const std::string& res) { // read expected_index and receive busy
+                if (res.size() < 10) {
+                    printf("ERROR: could not read send-item state from game\n");
+                    return;
+                }
+                // FIXME: if `this` gets destroyed without _snes getting
+                //        destroyed then code below is a bad memory access.
+                //        We need to cancel this callback on delete.
                 if (get_state() != State::JOINED) return; // changed state during Game::poll()
-                // FIXME: if this gets destroyed without _snes getting destroyed this is a bad memory access.
-                // we need to cancel this callback on delete
                 uint16_t expect = (uint8_t)res[1];
                 expect <<= 8; expect |= (uint8_t)res[0];
                 auto expectedIndex = (int)expect;
-                if (expectedIndex <= _lastItemIndex && res[2] == 0 && (_ignoreSendLock || (res[7] == 0 && res[8] == 0))) {
+                bool pending = _lockVersion > 1 ? res[9] : res[2];
+                if (expectedIndex <= _lastItemIndex && !pending && (_ignoreSendLock || (res[7] == 0 && res[8] == 0))) {
                     const auto it = _receivedItems.find(expectedIndex);
                     if (it == _receivedItems.end()) {
                         printf("ERROR: received bad items from server\n");
@@ -121,12 +129,15 @@ protected:
                     uint8_t buf[] = {
                         (uint8_t)(index &0xff), (uint8_t)((index >>8)&0xff),
                         (uint8_t)(amount&0xff), (uint8_t)((amount>>8)&0xff),
-                        (uint8_t)(itemid&0xff), (uint8_t)((itemid>>8)&0xff)
+                        (uint8_t)(itemid&0xff), (uint8_t)((itemid>>8)&0xff),
+                        1 // start script (for v0.39.2)
                     };
-                    _snes->write_memory(0x7e2578, std::string((const char*)buf, 6));
-                    // start
-                    char start[] = {1};
-                    _snes->write_memory(0x7e2577, std::string(start, 1));
+                    _snes->write_memory(0x7e2578, std::string((const char*)buf, _lockVersion > 1 ? 7 : 6));
+                    if (_lockVersion < 2) {
+                        // start script (for v0.39.1)
+                        char start[] = {1};
+                        _snes->write_memory(0x7e2577, std::string(start, 1));
+                    }
                 }
             });
         
@@ -154,6 +165,8 @@ private:
     int _lastItemIndex = -1;
     unsigned long _lastSent = 0;
     bool _ignoreSendLock = false;
+    uint32_t _gameVersion = 0; // not implemented yet. 0 means unknown
+    uint8_t _lockVersion = 0; // 0:unknown, 1:v0.39.1, 2:v0.39.2
     static constexpr auto CART_HEADER = "SECRET OF EVERMORE   \x31\x02\x0c\x03\x01\x33\x00";
     static constexpr size_t CART_HEADER_LOC = 0xFFC0;
     static constexpr size_t CART_HEADER_LEN = 28;

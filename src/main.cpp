@@ -328,7 +328,15 @@ void on_command(const std::string& command)
     } else if (command.find("/") == 0) {
         printf("Unknown command: %s\n", command.c_str());
     } else if (!ap) {
-        printf("AP not connected\n");
+        printf("AP not connected. Can't send chat message.\n");
+        if (command.length() >= 2 && command[1] == '/') {
+            printf("Did you mean \"%s\"?\n", command.substr(1).c_str());
+        } else if (command.substr(0, 7) == "connect") {
+            auto p = command[7] ? 7 : command.npos;
+            while (p != command.npos && command[p] == ' ') p++;
+            printf("Did you mean \"/connect%s%s\"?\n",
+                    p!=command.npos ? " " : "", p!=command.npos ? command.substr(p).c_str() : "");
+        }
     } else {
         ap->Say(command);
     }

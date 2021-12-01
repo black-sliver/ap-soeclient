@@ -274,7 +274,20 @@
             if (!text) spinnerElement.hidden = true;
           }
           statusElement.innerHTML = text;
-        }
+        },
+        apServer: (function() {
+            var hash = window.location.hash;
+            if (hash) {
+                hash = hash.substring(1);
+                var args = hash.split(',');
+                for (var i=0; i<args.length; i++) {
+                    var p = args[i].indexOf('=');
+                    if (p >= 0 && args[i].substr(0, p) == 'server') {
+                        return args[i].substr(p+1);
+                    }
+                }
+            }
+        })()
       };
       Module.setStatus('Downloading...');
       window.onerror = function(text,f,ln,col,e) {

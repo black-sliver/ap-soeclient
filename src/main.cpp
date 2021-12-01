@@ -301,6 +301,13 @@ void start()
 
     printf("Running mainloop...\n");
     printf("use /connect [<host>] to connect to an AP server\n");
+#ifdef __EMSCRIPTEN__
+    // auto-connect to ap server given by #server=...
+    EM_ASM({
+        // TODO: use argv and set connect_ap instead?
+        if (Module.apServer) Module.on_command('/connect '+Module.apServer);
+    });
+#endif
     emscripten_request_animation_frame_loop(step, 0);
 }
 

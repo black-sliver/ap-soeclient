@@ -57,7 +57,7 @@
 //  {{0x7e22e6, 0x01},   70}, // footknight
 //  {{0x7e22dd, 0x02},   71}, // sterling
 //  {{0x7e22e6, 0x80},   72}, // wall face
-//  {{0x7e22f3, 0x40},   73}, // carltron's robot
+//  {{0x7e22f1, 0x40},   73}, // carltron's robot
     // gourds
     {{0x7e2269, 0x08}, 100}, // #0, S. Jungle
     {{0x7e2268, 0x40}, 101}, // #1, S. Jungle

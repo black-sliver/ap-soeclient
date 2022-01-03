@@ -13,8 +13,19 @@
 #define UUID_FILE "/settings/uuid"
 #else
 #define UUID_FILE "uuid" // TODO: place in %appdata%
+#include <stdlib.h>
+#include <time.h>
 #endif
 
+
+static void init_rng()
+{
+    #ifdef __EMSCRIPTEN__
+    /* js crypto needs no init from C */
+    #else
+    srand ((unsigned int) time (NULL));
+    #endif
+}
 
 static uint8_t rand_byte()
 {
@@ -25,7 +36,7 @@ static uint8_t rand_byte()
         return buf[0];
     });
     #else
-    #error not implemented
+    return rand();
     #endif
 }
 
@@ -49,8 +60,9 @@ static std::string get_uuid()
         fclose(f);
     }
     if (!f || n < 32) {
+        init_rng();
         make_uuid(uuid);
-        f = fopen("/settings/uuid", "wb");
+        f = fopen(UUID_FILE, "wb");
         if (f) {
             n = fwrite(uuid, 1, 32, f);
             fclose(f);

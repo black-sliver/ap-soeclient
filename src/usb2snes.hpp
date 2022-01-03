@@ -1,7 +1,7 @@
 #ifndef _USB2SNES_H
 #define _USB2SNES_H
 
-#include "wsjs.hpp"
+#include <wswrap.hpp>
 #include <string>
 #include <queue>
 #include <nlohmann/json.hpp>
@@ -16,6 +16,7 @@
 class USB2SNES {
 protected:
     typedef nlohmann::json json;
+    typedef wswrap::WS WS;
 
 public:
     USB2SNES(const std::string& uri="ws://localhost:8080")
@@ -86,6 +87,7 @@ public:
 
     void poll()
     {
+        if (_ws) _ws->poll();
         if (_state < State::SOCKET_CONNECTED) { // TODO: == DISCONNECTED ?
             auto t = now();
             if (t - _lastSocketConnect > _socketReconnectInterval) {
@@ -293,7 +295,7 @@ private:
         if (item.binary)
             _ws->send_binary(item.data);
         else
-            _ws->send(item.data);
+            _ws->send_text(item.data);
         _txQueue.back().sent = true;
     }
 
@@ -323,15 +325,15 @@ private:
     void connect_socket()
     {
         delete _ws;
+        _ws = nullptr;
         if (_uri.empty()) {
-            _ws = nullptr;
             _state = State::DISCONNECTED;
             return;
         }
         _state = State::SOCKET_CONNECTING;
         while (!_txQueue.empty()) _txQueue.pop(); // TODO: run error handlers?
         _rxBuffer.clear();
-        _ws = new WSJS(_uri,
+        _ws = new WS(_uri,
                 [this]() { onopen(); },
                 [this]() { onclose(); },
                 [this](const std::string& s) { onmessage(s); },
@@ -368,7 +370,7 @@ private:
     }
 
     std::string _uri;
-    WSJS* _ws = nullptr;
+    WS* _ws = nullptr;
     State _state = State::DISCONNECTED;
     std::queue<TxItem> _txQueue;
     std::string _rxBuffer;

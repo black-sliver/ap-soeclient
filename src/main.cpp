@@ -1,12 +1,18 @@
-#include "wsjs.hpp"
 #include "usb2snes.hpp"
 #include "apclient.hpp"
 #include <stdio.h>
 #include <unistd.h>
 #include <algorithm>
+#ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <emscripten/bind.h>
+#else
+#define EM_BOOL bool
+#define EM_TRUE true
+#define EM_FALSE false
+#include <poll.h>
+#endif
 #include "uuid.h"
 
 
@@ -51,9 +57,13 @@ Game* game = nullptr;
 
 void set_status_color(const std::string& field, const std::string& color)
 {
+
+#ifdef __EMSCRIPTEN__
     EM_ASM({
         document.getElementById(UTF8ToString($0)).style.color = UTF8ToString($1);
     }, field.c_str(), color.c_str());
+#else
+#endif
 }
 
 void bad_seed(const std::string& apSeed, const std::string& gameSeed)
@@ -66,16 +76,6 @@ void bad_slot(const std::string& gameSlot)
 {
     printf("Game slot \"%s\" invalid. Did you connect to the wrong server?\n",
         gameSlot.c_str());
-}
-
-EM_BOOL step(double time, void* userData)
-{
-    // we run code that acts on elapsed time in the main loop
-    // TODO: use async timers instead
-    if (snes) snes->poll();
-    if (ap) ap->poll();
-    if (game) game->poll();
-    return EM_TRUE;
 }
 
 void connect_ap(std::string uri="")
@@ -262,6 +262,79 @@ void disconnect_ap()
     set_status_color("ap", "#777777");
 }
 
+bool read_command(std::string& cmd)
+{
+#ifdef __EMSCRIPTEN__
+    return false;
+#else
+    struct pollfd fd = { STDIN_FILENO, POLLIN, 0 };
+    int res = poll(&fd, 1, 5);
+    if (res && fd.revents) {
+        cmd.resize(1024);
+        if (fgets(cmd.data(), cmd.size(), stdin)) {
+            cmd.resize(strlen(cmd.data()));
+            while (!cmd.empty() && (cmd.back() == '\n' || cmd.back() == '\r')) cmd.pop_back();
+            return !cmd.empty();
+        }
+    }
+    return false;
+#endif
+}
+
+void on_command(const std::string& command)
+{
+    if (command == "/help") {
+        printf("Available commands:\n"
+               "  /connect [addr[:port]] - connect to AP server\n"
+               "  /disconnect - disconnect from AP server\n"
+               "  /force-send - send missing items to game, ignoring locks\n"
+               "  /sync - resync items/locations with AP server\n");
+    } else if (command == "/connect") {
+        connect_ap();
+    } else if (command.find("/connect ") == 0) {
+        connect_ap(command.substr(9));
+    } else if (command == "/disconnect") {
+        disconnect_ap();
+    } else if (command == "/sync") {
+        if (game) game->clear_cache();
+        if (ap) ap->Sync();
+    } else if (command == "/force-send") {
+        if (!game) printf("Can't force-send if game is not running.\n");
+        else if (!game->force_send()) printf("Game does not support force-send.\n");
+    } else if (command.find("/") == 0) {
+        printf("Unknown command: %s\n", command.c_str());
+    } else if (!ap || ap->get_state() < APClient::State::SOCKET_CONNECTED) {
+        printf("AP not connected. Can't send chat message.\n");
+        if (command.length() >= 2 && command[1] == '/') {
+            printf("Did you mean \"%s\"?\n", command.c_str()+1);
+        } else if (command.substr(0, 7) == "connect") {
+            auto p = command[7] ? 7 : command.npos;
+            while (p != command.npos && command[p] == ' ') p++;
+            printf("Did you mean \"/connect%s%s\"?\n",
+                    p!=command.npos ? " " : "", p!=command.npos ? command.substr(p).c_str() : "");
+        }
+    } else {
+        ap->Say(command);
+    }
+}
+
+EM_BOOL step(double time, void* userData)
+{
+    // we run code that acts on elapsed time in the main loop
+    // TODO: use async timers (for JS) instead and get rid of step() alltogether
+    if (snes) snes->poll();
+    if (ap) ap->poll();
+    if (game) game->poll();
+
+    // parse stdin
+    std::string cmd;
+    if (read_command(cmd)) {
+        on_command(cmd);
+    }
+
+    return EM_TRUE;
+}
+
 void start()
 {
 #ifndef __EMSCRIPTEN__ // HTML GUI has its own log
@@ -307,39 +380,10 @@ void start()
         // TODO: use argv and set connect_ap instead?
         if (Module.apServer) Module.on_command('/connect '+Module.apServer);
     });
-#endif
     emscripten_request_animation_frame_loop(step, 0);
-}
-
-void on_command(const std::string& command)
-{
-    if (command == "/connect") {
-        connect_ap();
-    } else if (command.find("/connect ") == 0) {
-        connect_ap(command.substr(9));
-    } else if (command == "/disconnect") {
-        disconnect_ap();
-    } else if (command == "/sync") {
-        if (game) game->clear_cache();
-        if (ap) ap->Sync();
-    } else if (command == "/force-send") {
-        if (!game) printf("Can't force-send if game is not running.\n");
-        else if (!game->force_send()) printf("Game does not support force-send.\n");
-    } else if (command.find("/") == 0) {
-        printf("Unknown command: %s\n", command.c_str());
-    } else if (!ap || ap->get_state() < APClient::State::SOCKET_CONNECTED) {
-        printf("AP not connected. Can't send chat message.\n");
-        if (command.length() >= 2 && command[1] == '/') {
-            printf("Did you mean \"%s\"?\n", command.substr(1).c_str());
-        } else if (command.substr(0, 7) == "connect") {
-            auto p = command[7] ? 7 : command.npos;
-            while (p != command.npos && command[p] == ' ') p++;
-            printf("Did you mean \"/connect%s%s\"?\n",
-                    p!=command.npos ? " " : "", p!=command.npos ? command.substr(p).c_str() : "");
-        }
-    } else {
-        ap->Say(command);
-    }
+#else
+    while (step(0, nullptr));
+#endif
 }
 
 int main(int argc, char** argv)
@@ -365,7 +409,9 @@ int main(int argc, char** argv)
     return 0;
 }
 
+#ifdef __EMSCRIPTEN__
 EMSCRIPTEN_BINDINGS(main) {
     emscripten::function("start", &start);
     emscripten::function("on_command", &on_command); // TODO: use stdin instead?
 }
+#endif

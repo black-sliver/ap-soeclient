@@ -10,7 +10,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #ifndef _APCLIENT_HPP
 #define _APCLIENT_HPP
 
-#include "wsjs.hpp"
+#include <wswrap.hpp>
 #include <string>
 #include <list>
 #include <set>
@@ -28,6 +28,7 @@ class APClient {
 protected:
     typedef nlohmann::json json;
     typedef valijson::adapters::NlohmannJsonAdapter JsonSchemaAdapter;
+    typedef wswrap::WS WS;
 
 public:
     APClient(const std::string& uuid, const std::string& game, const std::string& uri="ws://localhost:38281")
@@ -80,27 +81,27 @@ public:
         PLAYING = 20,
         GOAL = 30,
     };
-    
+
     enum class RenderFormat {
         TEXT,
         HTML,
         ANSI,
     };
-    
+
     struct NetworkItem {
         int item;
         int location;
         int player;
         int index = -1; // to sync items, not actually part of NetworkItem
     };
-    
+
     struct NetworkPlayer {
         int team;
         int slot;
         std::string alias;
         std::string name;
     };
-    
+
     struct TextNode {
         std::string type;
         std::string color;
@@ -142,7 +143,7 @@ public:
     {
         _hOnItemsReceived = f;
     }
-    
+
     void set_location_info_handler(std::function<void(const std::list<NetworkItem>&)> f)
     {
         _hOnLocationInfo = f;
@@ -196,14 +197,14 @@ public:
         }
         return "Unknown";
     }
-    
+
     std::string get_location_name(int code)
     {
         auto it = _locations.find(code);
         if (it != _locations.end()) return it->second;
         return "Unknown";
     }
-    
+
     std::string get_item_name(int code)
     {
         auto it = _items.find(code);
@@ -407,6 +408,7 @@ public:
 
     void poll()
     {
+        if (_ws) _ws->poll();
         if (_state < State::SOCKET_CONNECTED) {
             auto t = now();
             if (t - _lastSocketConnect > _socketReconnectInterval) {
@@ -639,7 +641,7 @@ private:
             return;
         }
         _state = State::SOCKET_CONNECTING;
-        _ws = new WSJS(_uri,
+        _ws = new WS(_uri,
                 [this]() { onopen(); },
                 [this]() { onclose(); },
                 [this](const std::string& s) { onmessage(s); },
@@ -684,7 +686,7 @@ private:
     std::string _uri;
     std::string _game;
     std::string _uuid;
-    WSJS* _ws = nullptr;
+    WS* _ws = nullptr;
     State _state = State::DISCONNECTED;
 
     std::function<void(void)> _hOnSocketConnected = nullptr;

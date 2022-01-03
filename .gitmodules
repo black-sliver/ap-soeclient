@@ -1,0 +1,3 @@
+[submodule "subprojects/wswrap"]
+	path = subprojects/wswrap
+	url = https://github.com/black-sliver/wswrap.git

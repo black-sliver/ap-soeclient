@@ -21,7 +21,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <valijson/validator.hpp>
 
 
-#define APCLIENT_DEBUG
+//#define APCLIENT_DEBUG // to get debug output
 
 
 class APClient {

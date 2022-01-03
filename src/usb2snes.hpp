@@ -10,7 +10,7 @@
 #include <algorithm>
 
 
-#define USB2SNES_DEBUG
+//#define USB2SNES_DEBUG // to get debug output
 
 
 class USB2SNES {

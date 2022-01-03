@@ -1,5 +1,5 @@
 #include "usb2snes.hpp"
-#include "apclient.hpp"
+#include <apclient.hpp>
 #include <stdio.h>
 #include <unistd.h>
 #include <algorithm>

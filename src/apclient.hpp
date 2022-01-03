@@ -290,7 +290,7 @@ public:
             _scoutQueue.insert(locations.begin(), locations.end());
             // FIXME: this needs to be sent at some point
         }
-        return false;
+        return true;
     }
 
     bool StatusUpdate(ClientStatus status)

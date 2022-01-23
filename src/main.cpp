@@ -48,6 +48,7 @@ APClient* ap = nullptr;
 bool ap_sync_queued = false;
 USB2SNES* snes = nullptr;
 Game* game = nullptr;
+std::string password;
 
 #ifdef __EMSCRIPTEN__
 #define DATAPACKAGE_CACHE "/settings/datapackage.json"
@@ -133,7 +134,7 @@ void connect_ap(std::string uri="")
         else if (strncmp(game->get_seed().c_str(), ap->get_seed().c_str(), GAME::MAX_SEED_LENGTH) != 0)
             bad_seed(ap->get_seed(), game->get_seed());
         else
-            ap->ConnectSlot(game->get_slot());
+            ap->ConnectSlot(game->get_slot(), password, game->get_items_handling());
     });
     ap->set_slot_connected_handler([](){
         set_status_color("ap", "#00ff00");
@@ -225,7 +226,7 @@ void create_game()
             }
             else
             {
-                ap->ConnectSlot(game->get_slot());
+                ap->ConnectSlot(game->get_slot(), password, game->get_items_handling());
             }
         }
     });

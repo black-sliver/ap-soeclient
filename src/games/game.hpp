@@ -280,6 +280,8 @@ public:
 
     virtual bool force_send() { return false; }
 
+    virtual int get_items_handling() const = 0;
+
 protected:    
     void log(const char* s)
     {

@@ -158,6 +158,11 @@ protected:
         _lastItemIndex = -1;
     }
 
+    virtual int get_items_handling() const override
+    {
+        return 0b101; // local items, remote inventory
+    }
+
 private:
     static std::map<uint32_t, std::map<uint8_t, unsigned> > _bitLocations;
     static std::map<int, std::pair<uint16_t, uint16_t> > _items;

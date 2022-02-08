@@ -341,6 +341,10 @@ EM_BOOL step(double time, void* userData)
 
     return EM_TRUE;
 }
+EM_BOOL interval_step(double time)
+{
+    return step(time, nullptr);
+}
 
 void start()
 {
@@ -387,7 +391,10 @@ void start()
         // TODO: use argv and set connect_ap instead?
         if (Module.apServer) Module.on_command('/connect '+Module.apServer);
     });
-    emscripten_request_animation_frame_loop(step, 0);
+    //emscripten_request_animation_frame_loop(step, 0);
+    EM_ASM({
+        setInterval(function(){Module.step(0);}, 100);
+    });
 #else
     while (step(0, nullptr));
 #endif
@@ -419,6 +426,7 @@ int main(int argc, char** argv)
 #ifdef __EMSCRIPTEN__
 EMSCRIPTEN_BINDINGS(main) {
     emscripten::function("start", &start);
+    emscripten::function("step", &interval_step);
     emscripten::function("on_command", &on_command); // TODO: use stdin instead?
 }
 #endif

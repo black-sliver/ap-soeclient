@@ -150,10 +150,13 @@ private:
     uint32_t mapaddr(uint32_t addr)
     {
         if (addr>>16 == 0x7e || addr>>16==0x7f) return 0xF50000 + (addr&0xffff);
-        // TODO: SRAM
+        // fastrom mirror
+        if (addr>=0x800000) addr -= 0x800000;
+        // SRAM // TODO: hirom/lorom
+        if ((addr>>16) >= 0x20 && (addr>>16) <= 0x3f && (addr&0xffff) >= 0x6000 && (addr&0xffff) <= 0x7fff)
+            return 0xe00000 + ((addr>>16)-0x20) * 0x2000 + (addr&0xffff)-0x6000;
         // ROM // TODO: hirom/lorom
-        if (addr>=0x800000) return addr-0x800000;
-        return addr;
+        return addr & 0x3fffff;
     }
 
     void onopen()

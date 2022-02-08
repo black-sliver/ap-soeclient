@@ -268,6 +268,11 @@ public:
         _hOnGameFinished = f;
     }
 
+    void set_death_handler(std::function<void(void)> f)
+    {
+        _hOnDeath = f;
+    }
+
     State get_state() const {
         return _state;
     }
@@ -280,9 +285,15 @@ public:
         return _seed;
     }
 
+    void set_deathlink(bool value) {
+        _deathlink = value;
+    }
+
     virtual void send_item(int index, int64_t id, const std::string& sender, const std::string& location) = 0;
 
     virtual bool force_send() { return false; }
+
+    virtual void send_death() = 0;
 
     virtual int get_items_handling() const = 0;
 
@@ -310,6 +321,8 @@ protected:
     virtual int64_t get_location_base() const = 0;
     
     USB2SNES* _snes = nullptr;
+    bool _deathlink = false;
+    std::function<void(void)> _hOnDeath = nullptr;
     
 private:
     void makeAddressCache()

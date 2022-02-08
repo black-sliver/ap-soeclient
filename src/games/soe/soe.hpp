@@ -90,6 +90,12 @@ protected:
         if (index > _lastItemIndex) _lastItemIndex = index;
     }
 
+    virtual void send_death() override
+    {
+        if (_deathlink)
+            _deathQueued = true;
+    }
+
     virtual void poll() override
     {
         // NOTE: see NOTE in Game::poll()
@@ -142,7 +148,39 @@ protected:
                     }
                 }
             });
-        
+            if (_deathlink) _snes->read_memory(BOY_HP_LOC, 2, [this](const std::string& res) {
+                if (res[0] == 0 && res[1] == 0) {
+                    if (!_dead) {
+                        _dead = true;
+                        if (now() - _lastDeathlinkDeath > 5000) {
+                            // if we die within 5 seconds of deathlink completion,
+                            // don't send deathlink for it
+                            if (_hOnDeath) _hOnDeath();
+                        }
+                    }
+                } else {
+                    _dead = false;
+                }
+            });
+            if (_deathlink && _deathQueued) _snes->read_memory(EFFECT_LOC, 2, [this](const std::string& res) {
+                if (res[0] == 0 && res[1] == 0) { // no effect scheduled (done or idle)
+                    if (_deathSent) {
+                        _deathSent = false;
+                        _deathQueued = false;
+                    } else {
+                        _snes->write_memory(EFFECT_LOC, std::string("\x01\x00", 2));
+                        _deathSent = true;
+                    }
+                    _lastDeathlinkDeath = now(); // started or done
+                } else if (_deathSent) {
+                    _lastDeathlinkDeath = now(); // waiting to trigger
+                }
+            });
+        } else {
+            // don't participate in deathlink while not in-game
+            _dead = true;
+            _deathQueued = false;
+            _deathSent = false;
         }
     }
     
@@ -174,11 +212,18 @@ private:
     bool _ignoreSendLock = false;
     uint32_t _gameVersion = 0; // not implemented yet. 0 means unknown
     uint8_t _lockVersion = 0; // 0:unknown, 1:v0.39.1, 2:v0.39.2
+    bool _dead = true;
+    bool _deathQueued = false;
+    bool _deathSent = false;
+    unsigned long _lastDeathlinkDeath = 0;
+
     static constexpr auto CART_HEADER = "SECRET OF EVERMORE   \x31\x02\x0c\x03\x01\x33\x00";
     static constexpr size_t CART_HEADER_LOC = 0xFFC0;
     static constexpr size_t CART_HEADER_LEN = 28;
     static constexpr size_t AP_SECTION_LOC = 0x3d0040; // $fd0040; TODO: move to WRAM
     static constexpr size_t AP_SECTION_LEN = 64;
+    static constexpr size_t BOY_HP_LOC = 0x7E4EB3;
+    static constexpr size_t EFFECT_LOC = 0xa07ffe;
 };
 
 #endif // _GAMES_SOE_SOE_H

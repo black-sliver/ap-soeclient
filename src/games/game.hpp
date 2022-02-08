@@ -3,11 +3,15 @@
 
 
 #include "../usb2snes.hpp"
-#include <stdint.h>
+#include <inttypes.h>
 #include <functional>
 #include <string>
 #include <list>
 #include <map>
+
+#if defined(WIN32) && !defined(PRId64 )
+#define PRId64 "I64d"
+#endif
 
 #if 0
 #define debug(fmt, ...) printf ("Game: " fmt "\n", __VA_ARGS__);
@@ -186,8 +190,8 @@ public:
                         _state = State::RUNNING;
                         if (_hOnGameLeft) _hOnGameLeft();
                     } else if (_readBufferValid) {
-                        std::list<int> locationsChecked;
-                        std::list<int> locationsScouted;
+                        std::list<int64_t> locationsChecked;
+                        std::list<int64_t> locationsScouted;
                         for (const auto& pair: _readBuffer) {
                             const auto& bits = get_bit_locations();
                             auto cacheIt = _cache.find(pair.first);
@@ -199,10 +203,10 @@ public:
                                 if (bitsIt != bits.end()) {
                                     for (const auto& bit: bitsIt->second) {
                                         if ((pair.second & bit.first) && !(old & bit.first)) {
-                                            int locId = get_location_base() + bit.second;
+                                            int64_t locId = get_location_base() + bit.second;
                                             char msg[128];
                                             snprintf(msg, sizeof(msg),
-                                                     "Looted location (#%u) %d",
+                                                     "Looted location (#%u) %" PRId64,
                                                      bit.second, locId);
                                             log(msg);
                                             locationsChecked.push_back(locId);
@@ -249,12 +253,12 @@ public:
         _hOnGameLeft = f;
     }
 
-    void set_locations_checked_handler(std::function<void(std::list<int>)> f)
+    void set_locations_checked_handler(std::function<void(std::list<int64_t>)> f)
     {
         _hOnLocationsChecked = f;
     }
 
-    void set_locations_scouted_handler(std::function<void(std::list<int>)> f)
+    void set_locations_scouted_handler(std::function<void(std::list<int64_t>)> f)
     {
         _hOnLocationsScouted = f;
     }
@@ -276,7 +280,7 @@ public:
         return _seed;
     }
 
-    virtual void send_item(int index, int id, const std::string& sender, const std::string& location) = 0;
+    virtual void send_item(int index, int64_t id, const std::string& sender, const std::string& location) = 0;
 
     virtual bool force_send() { return false; }
 
@@ -303,7 +307,7 @@ protected:
     virtual void read_seed_and_slot(std::function<void(const std::string&, const std::string&)> callback) = 0;
     virtual void read_joined(std::function<void(bool)> callback) = 0;
     virtual void read_finished(std::function<void(bool)> callback) = 0;
-    virtual int get_location_base() const = 0;
+    virtual int64_t get_location_base() const = 0;
     
     USB2SNES* _snes = nullptr;
     
@@ -360,8 +364,8 @@ private:
     std::function<void(void)> _hOnGameJoined = nullptr;
     std::function<void(void)> _hOnGameLeft = nullptr;
     std::function<void(void)> _hOnGameFinished = nullptr;
-    std::function<void(std::list<int>)> _hOnLocationsChecked = nullptr;
-    std::function<void(std::list<int>)> _hOnLocationsScouted = nullptr;
+    std::function<void(std::list<int64_t>)> _hOnLocationsChecked = nullptr;
+    std::function<void(std::list<int64_t>)> _hOnLocationsScouted = nullptr;
 };
 
 #endif // _GAMES_GAME_H

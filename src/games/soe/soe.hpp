@@ -6,6 +6,8 @@
 #include "../../usb2snes.hpp"
 #include <map>
 #include <string.h>
+#include <inttypes.h>
+#include <stdint.h>
 
 #ifdef GAME
 #error multiple games defined
@@ -76,15 +78,15 @@ protected:
         });
     }
 
-    virtual int get_location_base() const override
+    virtual int64_t get_location_base() const override
     {
         return 64000;
     }
 
-    virtual void send_item(int index, int id, const std::string& sender, const std::string& location) override
+    virtual void send_item(int index, int64_t id, const std::string& sender, const std::string& location) override
     {
         id -= get_location_base();
-        _receivedItems[index] = id;
+        _receivedItems[index] = (int)id;
         if (index > _lastItemIndex) _lastItemIndex = index;
     }
 
@@ -175,7 +177,7 @@ private:
     static constexpr auto CART_HEADER = "SECRET OF EVERMORE   \x31\x02\x0c\x03\x01\x33\x00";
     static constexpr size_t CART_HEADER_LOC = 0xFFC0;
     static constexpr size_t CART_HEADER_LEN = 28;
-    static constexpr size_t AP_SECTION_LOC = 0x3d0040; // $fd0040; TODO: move to SRAM
+    static constexpr size_t AP_SECTION_LOC = 0x3d0040; // $fd0040; TODO: move to WRAM
     static constexpr size_t AP_SECTION_LEN = 64;
 };
 

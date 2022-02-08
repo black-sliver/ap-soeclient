@@ -1,6 +1,7 @@
 #include "usb2snes.hpp"
 #include <apclient.hpp>
 #include <stdio.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <algorithm>
 #ifdef __EMSCRIPTEN__
@@ -14,7 +15,12 @@
 #include <poll.h>
 #endif
 #include "uuid.h"
+#include <math.h>
+#include <limits>
 
+#if defined(WIN32) && !defined(PRId64 )
+#define PRId64 "I64d"
+#endif
 
 #include GAME_H
 
@@ -163,7 +169,7 @@ void connect_ap(std::string uri="")
             std::string itemname = ap->get_item_name(item.item);
             std::string sender = ap->get_player_alias(item.player);
             std::string location = ap->get_location_name(item.location);
-            printf("  #%d: %s (%d) from %s - %s\n",
+            printf("  #%d: %s (%" PRId64 ") from %s - %s\n",
                    item.index, itemname.c_str(), item.item,
                    sender.c_str(), location.c_str());
             game->send_item(item.index, item.item, sender, location);
@@ -248,10 +254,10 @@ void create_game()
         printf("Game finished!\n");
         if (ap) ap->StatusUpdate(APClient::ClientStatus::GOAL);
     });
-    game->set_locations_checked_handler([](std::list<int> locations) {
+    game->set_locations_checked_handler([](std::list<int64_t> locations) {
         if (ap) ap->LocationChecks(locations);
     });
-    game->set_locations_scouted_handler([](std::list<int> locations) {
+    game->set_locations_scouted_handler([](std::list<int64_t> locations) {
         if (ap) ap->LocationScouts(locations);
     });
 }

@@ -1,5 +1,6 @@
 #include "soe.hpp"
 #include <utility>
+#include <inttypes.h>
 
 static std::map<uint32_t, std::map<uint8_t, unsigned> >
 makeBitLocations(const std::map<Game::bitaddr, unsigned> locations)

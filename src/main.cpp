@@ -55,7 +55,6 @@ bool ap_sync_queued = false;
 USB2SNES* snes = nullptr;
 Game* game = nullptr;
 std::string password;
-bool deathlink = false;
 bool ap_connect_sent = false; // TODO: move to APClient::State ?
 double deathtime = -1;
 
@@ -151,7 +150,7 @@ void connect_ap(std::string uri="")
             bad_seed(ap->get_seed(), game->get_seed());
         else {
             std::list<std::string> tags;
-            if (deathlink) tags.push_back("DeathLink");
+            if (game->want_deathlink()) tags.push_back("DeathLink");
             ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags);
             ap_connect_sent = true; // TODO: move to APClient::State ?
         }
@@ -211,7 +210,7 @@ void connect_ap(std::string uri="")
         printf("%s\n", ap->render_json(msg, APClient::RenderFormat::ANSI).c_str());
     });
     ap->set_bounced_handler([](const json& cmd) {
-        if (deathlink) {
+        if (game->want_deathlink()) {
             auto tagsIt = cmd.find("tags");
             auto dataIt = cmd.find("data");
             if (tagsIt != cmd.end() && tagsIt->is_array()
@@ -243,7 +242,6 @@ void create_game()
     
     printf("Instantiating \"%s\" game...\n", GAME::Name);
     game = new GAME(snes);
-    game->set_deathlink(deathlink);
     set_status_color("game", "#ff0000");
     game->set_game_started_handler([]() {
         game->clear_cache(); // is this good enough?
@@ -263,6 +261,12 @@ void create_game()
                 ap->reset();
                 return;
             }
+            else if (game->get_deathlink() != game->want_deathlink()) {
+                std::list<std::string> tags;
+                game->set_deathlink(game->want_deathlink());
+                if (game->get_deathlink()) tags.push_back("DeathLink");
+                ap->ConnectUpdate(false, 0, true, {"DeathLink"});
+            }
         }
         if (ap && ap->get_state() == APClient::State::ROOM_INFO) {
             if (!game->get_seed().empty() &&
@@ -274,7 +278,8 @@ void create_game()
             else
             {
                 std::list<std::string> tags;
-                if (deathlink) tags.push_back("DeathLink");
+                game->set_deathlink(game->want_deathlink());
+                if (game->get_deathlink()) tags.push_back("DeathLink");
                 ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags);
                 ap_connect_sent = true; // TODO: move to APClient::State ?
             }
@@ -349,8 +354,7 @@ void on_command(const std::string& command)
                "  /connect [addr[:port]] - connect to AP server\n"
                "  /disconnect - disconnect from AP server\n"
                "  /force-send - send missing items to game, ignoring locks\n"
-               "  /sync - resync items/locations with AP server\n"
-               "  /deathlink - enable death link (for testing with IPS)\n");
+               "  /sync - resync items/locations with AP server\n");
     } else if (command == "/connect") {
         connect_ap();
     } else if (command.find("/connect ") == 0) {
@@ -363,12 +367,6 @@ void on_command(const std::string& command)
     } else if (command == "/force-send") {
         if (!game) printf("Can't force-send if game is not running.\n");
         else if (!game->force_send()) printf("Game does not support force-send.\n");
-    } else if (command == "/deathlink") {
-        deathlink = true;
-        if (ap && ap_connect_sent)
-            ap->ConnectUpdate(false, 0, true, {"DeathLink"});
-        if (game)
-            game->set_deathlink(true);
     } else if (command.find("/") == 0) {
         printf("Unknown command: %s\n", command.c_str());
     } else if (!ap || ap->get_state() < APClient::State::SOCKET_CONNECTED) {

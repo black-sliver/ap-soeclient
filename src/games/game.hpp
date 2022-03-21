@@ -92,8 +92,9 @@ public:
             //       or better detect if read was cancelled
             if (t - _lastStartedCheck >= STARTED_CHECK_INTERVAL && 
                     _snes->get_state() == USB2SNES::State::SNES_CONNECTED) {
-                read_seed_and_slot([this](const std::string& seed, const std::string& slot){
+                read_seed_and_slot([this](const std::string& seed, const std::string& slot, unsigned flags){
                     if (!seed.empty() && !slot.empty()) {
+                        _wantDeathlink = flags & FLAG_WANT_DEATHLINK;
                         if (seed == _seed && slot == _slot && _state >= State::RUNNING)
                             return; // already done
                         _seed = seed;
@@ -111,16 +112,18 @@ public:
             //       or better detect if read was cancelled
             if (t - _lastJoinedCheck >= JOINED_CHECK_INTERVAL &&
                     _snes->get_state() == USB2SNES::State::SNES_CONNECTED) {
-                read_seed_and_slot([this](const std::string& seed, const std::string& slot) {
+                read_seed_and_slot([this](const std::string& seed, const std::string& slot, unsigned flags) {
                     invalidate_pending_read();
                     if (seed != _seed || slot != _slot) {
                         _state = State::STOPPED;
                         _seed.clear();
                         _slot.clear();
+                        _wantDeathlink = false;
                         invalidate_pending_read();
                         log("stopped, game, slot or seed changed");
                         if (_hOnGameStopped) _hOnGameStopped();
                     } else {
+                        _wantDeathlink = flags & FLAG_WANT_DEATHLINK;
                         read_joined([this](bool res) {
                             invalidate_pending_read();
                             if (res && _state < State::JOINED) {
@@ -169,15 +172,17 @@ public:
                     _finishedBuffer = res;
                 });
                 // verify rom by reading seed and slot
-                read_seed_and_slot([this](const std::string& seed, const std::string& slot) {
+                read_seed_and_slot([this](const std::string& seed, const std::string& slot, unsigned flags) {
                     if (!seed.empty() && seed == _seed && !slot.empty() && slot == _slot) return; // OK
                     invalidate_pending_read();
                     if (_state == State::JOINED) {
                         _state = State::RUNNING;
+                        _wantDeathlink = flags & FLAG_WANT_DEATHLINK;
                         if (_hOnGameLeft) _hOnGameLeft();
                     }
                     if (_state == State::RUNNING) {
                         _state = State::STOPPED;
+                        _wantDeathlink = false;
                         log("stopped, game, slot or seed changed");
                         if (_hOnGameStopped) _hOnGameStopped();
                     }
@@ -289,6 +294,14 @@ public:
         _deathlink = value;
     }
 
+    bool get_deathlink() const {
+        return _deathlink;
+    }
+
+    bool want_deathlink() const {
+        return _wantDeathlink;
+    }
+
     virtual void send_item(int index, int64_t id, const std::string& sender, const std::string& location) = 0;
 
     virtual bool force_send() { return false; }
@@ -297,7 +310,11 @@ public:
 
     virtual int get_items_handling() const = 0;
 
-protected:    
+protected:
+    enum Flags {
+        FLAG_WANT_DEATHLINK = 1
+    };
+
     void log(const char* s)
     {
         printf("Game: %s\n", s);
@@ -315,13 +332,14 @@ protected:
     virtual void on_game_joined() {} // override this to handle game join
 
     virtual const std::map<uint32_t, std::map<uint8_t, unsigned> > get_bit_locations() const = 0;
-    virtual void read_seed_and_slot(std::function<void(const std::string&, const std::string&)> callback) = 0;
+    virtual void read_seed_and_slot(std::function<void(const std::string&, const std::string&, unsigned flags)> callback) = 0;
     virtual void read_joined(std::function<void(bool)> callback) = 0;
     virtual void read_finished(std::function<void(bool)> callback) = 0;
     virtual int64_t get_location_base() const = 0;
     
     USB2SNES* _snes = nullptr;
     bool _deathlink = false;
+    bool _wantDeathlink = false;
     std::function<void(void)> _hOnDeath = nullptr;
     
 private:

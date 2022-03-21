@@ -36,20 +36,27 @@ protected:
         return _bitLocations;
     }
 
-    virtual void read_seed_and_slot(std::function<void(const std::string&, const std::string&)> callback) override
+    virtual void read_seed_and_slot(std::function<void(const std::string&, const std::string&, unsigned flags)> callback) override
     {
-        if (_snes->get_state() != USB2SNES::State::SNES_CONNECTED) callback("","");
+        if (_snes->get_state() != USB2SNES::State::SNES_CONNECTED) callback("","",0);
         _snes->read_memory(CART_HEADER_LOC, CART_HEADER_LEN,
                 [this,callback](const std::string& res)
         {
             if (memcmp(res.c_str(), CART_HEADER, CART_HEADER_LEN)) {
-                callback("","");
+                callback("","",0);
             } else {
-                _snes->read_memory(AP_SECTION_LOC, AP_SECTION_LEN,
-                        [callback](const std::string& res)
+                _snes->read_memory(GAME_FLAGS_LOC, 1,
+                        [this,callback](const std::string& res)
                 {
-                    std::string seed = res.substr(0,32);
-                    callback(seed.c_str(), res.c_str()+32); // c_str() trims at NUL byte
+                    uint8_t b = (uint8_t)res[0];
+                    unsigned flags = 0;
+                    if (b & 0x80) flags |= FLAG_WANT_DEATHLINK;
+                    _snes->read_memory(AP_SECTION_LOC, AP_SECTION_LEN,
+                            [callback, flags](const std::string& res)
+                    {
+                        std::string seed = res.substr(0,32);
+                        callback(seed.c_str(), res.c_str()+32, flags); // c_str() trims at NUL byte
+                    });
                 });
             }
         });
@@ -222,6 +229,7 @@ private:
     static constexpr size_t CART_HEADER_LEN = 28;
     static constexpr size_t AP_SECTION_LOC = 0x3d0040; // $fd0040; TODO: move to WRAM
     static constexpr size_t AP_SECTION_LEN = 64;
+    static constexpr size_t GAME_FLAGS_LOC = 0x3d000c; // $fd000c; TODO: move to WRAM
     static constexpr size_t BOY_HP_LOC = 0x7E4EB3;
     static constexpr size_t EFFECT_LOC = 0xa07ffe;
 };

@@ -335,3 +335,9 @@
     {382, {  1, 0x802}}, // #282, Honey
     {383, {  1, 0x118}}, // #283, Atom Smasher
     {384, {  4, 0x20e}}, // #284, 4 Dry Ice
+    // traps
+    {900, {  1, 0x151}}, // Quake Trap
+    {901, {  1, 0x152}}, // Poison Trap
+    {902, {  1, 0x153}}, // Confound Trap
+    {903, {  1, 0x154}}, // HUD Trap
+    {904, {  1, 0x155}}, // OHKO Trap

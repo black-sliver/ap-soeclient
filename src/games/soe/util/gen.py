@@ -9,6 +9,7 @@ BOSSES_BASE_NUMBER = 50
 GOURDS_BASE_NUMBER = 100
 NPC_BASE_NUMBER = 400  # not implemented
 SNIFF_BASE_NUMBER = 500  # not implemented
+TRAP_BASE_NUMBER = 900
 
 alchemy = [  # there is no json for this (yet) :/
     # [itemid, name, [addr,mask]
@@ -68,6 +69,15 @@ boss_drops = [  # taken from data.h, evermizer wiki and ram map. sadly this can 
     [0x126, "Diamond Eye"],
 ]
 
+traps = [  # taken from data.h. TODO: extract
+    [0x151, "Quake Trap"],
+    [0x152, "Poison Trap"],
+    [0x153, "Confound Trap"],
+    [0x154, "HUD Trap"],
+    [0x155, "OHKO Trap"],
+]
+
+
 def main(src_dir, dst_dir):
     import os.path
     import json
@@ -83,6 +93,7 @@ def main(src_dir, dst_dir):
                 floc.write(s)
                 s = '    {%3d, {%3d, 0x%03x}}, // %s\n' % (n, 1, spell[0], spell[1])
                 fitems.write(s)
+
             with open(os.path.join(src_dir, 'bosses.json'), 'r') as fin:
                 floc.write('    // bosses\n')
                 fitems.write('    // bosses\n')
@@ -137,6 +148,12 @@ def main(src_dir, dst_dir):
                     s = '    {%3d, {%3d, 0x%03x}}, // #%d, %s\n' % (GOURDS_BASE_NUMBER + checknr, amount, prize, checknr, name)
                     fitems.write(s)
                     checknr += 1
+
+            fitems.write('    // traps\n')
+            for n, drop in enumerate(traps, TRAP_BASE_NUMBER):
+                s = '    {%3d, {%3d, 0x%03x}}, // %s\n' % (n, 1, drop[0], drop[1])
+                fitems.write(s)
+
 
 if __name__ == '__main__':
     import argparse

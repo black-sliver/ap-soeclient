@@ -155,7 +155,7 @@ void connect_ap(std::string uri="")
             ap_connect_sent = true; // TODO: move to APClient::State ?
         }
     });
-    ap->set_slot_connected_handler([](){
+    ap->set_slot_connected_handler([](const json&){
         set_status_color("ap", "#00ff00");
     });
     ap->set_slot_disconnected_handler([](){

@@ -55,12 +55,15 @@
         flex: 1;
       }
 
-      .ansi31 { color: #f87; }
+      .ansi31 { color: #f66; }
       .ansi32 { color: #7f8; }
       .ansi33 { color: #ff4; }
       .ansi34 { color: #79f; }
       .ansi35 { color: #f5f; }
       .ansi36 { color: #5ff; }
+      .ansi38-5-219 { color: plum; }
+      .ansi38-5-62 { color: slateblue; }
+      .ansi38-5-210 { color: salmon; }
     </style>
   </head>
   <body>
@@ -194,7 +197,7 @@
             } else {
                 var n = 1;
                 while (t[n] != 'm') n++; // find closing 'm'
-                var fmt = t.substr(0, n).replace('"', '');
+                var fmt = t.substr(0, n).replace(/"/g,'').replace(/[;:]/g,'-');
                 t = t.substr(n+1);
                 s += '<span class="ansi' + fmt + '">' + t;
                 tagOpen = true;

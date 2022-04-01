@@ -24,6 +24,8 @@
 
 #include GAME_H
 
+#define VERSION_TUPLE {0,2,7}
+
 
 /* This is the entry point for our cpp ap client.
  *
@@ -151,7 +153,7 @@ void connect_ap(std::string uri="")
         else {
             std::list<std::string> tags;
             if (game->want_deathlink()) tags.push_back("DeathLink");
-            ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags, {0,2,6});
+            ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags, VERSION_TUPLE);
             ap_connect_sent = true; // TODO: move to APClient::State ?
         }
     });
@@ -280,7 +282,7 @@ void create_game()
                 std::list<std::string> tags;
                 game->set_deathlink(game->want_deathlink());
                 if (game->get_deathlink()) tags.push_back("DeathLink");
-                ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags, {0,2,6});
+                ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags, VERSION_TUPLE);
                 ap_connect_sent = true; // TODO: move to APClient::State ?
             }
         }

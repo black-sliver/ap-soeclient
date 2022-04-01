@@ -306,6 +306,8 @@ public:
 
     virtual bool force_send() { return false; }
 
+    virtual bool force_resend() { return false; }
+
     virtual void send_death() = 0;
 
     virtual int get_items_handling() const = 0;

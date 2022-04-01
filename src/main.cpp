@@ -354,6 +354,7 @@ void on_command(const std::string& command)
                "  /connect [addr[:port]] - connect to AP server\n"
                "  /disconnect - disconnect from AP server\n"
                "  /force-send - send missing items to game, ignoring locks\n"
+               "  /force-resend - resend all items to game\n"
                "  /sync - resync items/locations with AP server\n");
     } else if (command == "/connect") {
         connect_ap();
@@ -367,6 +368,9 @@ void on_command(const std::string& command)
     } else if (command == "/force-send") {
         if (!game) printf("Can't force-send if game is not running.\n");
         else if (!game->force_send()) printf("Game does not support force-send.\n");
+    } else if (command == "/force-resend") {
+        if (!game) printf("Can't force-resend if game is not running.\n");
+        else if (!game->force_resend()) printf("Game does not support force-resend.\n");
     } else if (command.find("/") == 0) {
         printf("Unknown command: %s\n", command.c_str());
     } else if (!ap || ap->get_state() < APClient::State::SOCKET_CONNECTED) {

@@ -127,7 +127,7 @@ protected:
                 if (get_state() != State::JOINED) return; // changed state during Game::poll()
                 uint16_t expect = (uint8_t)res[1];
                 expect <<= 8; expect |= (uint8_t)res[0];
-                auto expectedIndex = (int)expect;
+                auto expectedIndex = _ignoreSendIndex ? 0 : (int)expect;
                 bool pending = _lockVersion > 1 ? res[9] : res[2];
                 if (expectedIndex <= _lastItemIndex && !pending && (_ignoreSendLock || (res[7] == 0 && res[8] == 0))) {
                     const auto it = _receivedItems.find(expectedIndex);
@@ -147,6 +147,14 @@ protected:
                         (uint8_t)(itemid&0xff), (uint8_t)((itemid>>8)&0xff),
                         1 // start script (for v0.39.2)
                     };
+                    if (_ignoreSendIndex) {
+                        uint8_t overrideIndexBuf[] = {
+                            (uint8_t)((unsigned)expectedIndex &0xff), (uint8_t)(((unsigned)expectedIndex >>8)&0xff)
+                        };
+                        _snes->write_memory(0x7e2575,
+                                std::string((const char*)overrideIndexBuf, sizeof(overrideIndexBuf)));
+                        _ignoreSendIndex = false;
+                    }
                     _snes->write_memory(0x7e2578, std::string((const char*)buf, _lockVersion > 1 ? 7 : 6));
                     if (_lockVersion < 2) {
                         // start script (for v0.39.1)
@@ -197,6 +205,13 @@ protected:
         _ignoreSendLock = true;
         return true;
     }
+
+    virtual bool force_resend() override
+    {
+        // overwrite expected item index to be 0
+        _ignoreSendIndex = true;
+        return true;
+    }
     
     virtual void clear_cache() override
     {
@@ -217,6 +232,7 @@ private:
     int _lastItemIndex = -1;
     unsigned long _lastSent = 0;
     bool _ignoreSendLock = false;
+    bool _ignoreSendIndex = false;
     uint32_t _gameVersion = 0; // not implemented yet. 0 means unknown
     uint8_t _lockVersion = 0; // 0:unknown, 1:v0.39.1, 2:v0.39.2
     bool _dead = true;

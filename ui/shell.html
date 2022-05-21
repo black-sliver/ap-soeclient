@@ -221,16 +221,19 @@
         preRun: [],
         postRun: [],
         autoscroll: true,
-        print: (function() {
+        print: function(text) {
+          if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+          Module.printReal(text);
+        },
+        printReal: (function() {
           var element = document.getElementById('output');
           if (element) element.value = ''; // clear browser cache
           element.addEventListener('scroll', function() {
             Module.autoscroll = element.scrollTop + element.clientHeight >= element.scrollHeight - 1;
           });
-          return function(text) {
-            if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+          return function(text, isErr) {
             var raw = deansify(text);
-            console.log(raw);
+            if (isErr) console.error(raw); else console.log(raw);
             log(raw);
             // These replacements are necessary if you render to raw HTML
             text = text.replace(/&/g, "&amp;");
@@ -253,8 +256,7 @@
         })(),
         printErr: function(text) {
           if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-          console.error(text);
-          log(text);
+          Module.printReal(text, true);
         },
         setStatus: function(text) {
           if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };

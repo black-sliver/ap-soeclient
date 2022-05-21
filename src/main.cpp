@@ -1,5 +1,6 @@
 #include "usb2snes.hpp"
 #include <apclient.hpp>
+#include <apuuid.hpp>
 #include <stdio.h>
 #include <inttypes.h>
 #include <unistd.h>
@@ -14,7 +15,6 @@
 #define EM_FALSE false
 #include <poll.h>
 #endif
-#include "uuid.h"
 #include <math.h>
 #include <limits>
 
@@ -63,8 +63,10 @@ double deathtime = -1;
 
 #ifdef __EMSCRIPTEN__
 #define DATAPACKAGE_CACHE "/settings/datapackage.json"
+#define UUID_FILE "/settings/uuid"
 #else
 #define DATAPACKAGE_CACHE "datapackage.json" // TODO: place in %appdata%
+#define UUID_FILE "uuid" // TODO: place in %appdata%
 #endif
 
 bool isEqual(double a, double b)
@@ -99,7 +101,7 @@ void bad_slot(const std::string& gameSlot)
 void connect_ap(std::string uri="")
 {
     // read or generate uuid, required by AP
-    std::string uuid = get_uuid();
+    std::string uuid = ap_get_uuid(UUID_FILE);
 
     if (ap) delete ap;
     ap = nullptr;
@@ -113,24 +115,9 @@ void connect_ap(std::string uri="")
     if (game) game->clear_cache();
 
     // load DataPackage cache
-    FILE* f = fopen(DATAPACKAGE_CACHE, "rb");
-    if (f) {
-        char* buf = nullptr;
-        size_t len = (size_t)0;
-        if ((0 == fseek(f, 0, SEEK_END)) &&
-            ((len = ftell(f)) > 0) &&
-            ((buf = (char*)malloc(len+1))) &&
-            (0 == fseek(f, 0, SEEK_SET)) &&
-            (len == fread(buf, 1, len, f)))
-        {
-            buf[len] = 0;
-            try {
-                ap->set_data_package(json::parse(buf));
-            } catch (std::exception) { /* ignore */ }
-        }
-        free(buf);
-        fclose(f);
-    }
+    try {
+        ap->set_data_package_from_file(DATAPACKAGE_CACHE);
+    } catch (std::exception) { /* ignore */ }
 
     // set state and callbacks
     ap_sync_queued = false;
@@ -193,17 +180,12 @@ void connect_ap(std::string uri="")
         }
     });
     ap->set_data_package_changed_handler([](const json& data) {
-        FILE* f = fopen(DATAPACKAGE_CACHE, "wb");
-        if (f) {
-            std::string s = data.dump();
-            fwrite(s.c_str(), 1, s.length(), f);
-            fclose(f);
-            #ifdef __EMSCRIPTEN__
-            EM_ASM(
-                FS.syncfs(function (err) {});
-            );
-            #endif
-        }
+        ap->save_data_package(DATAPACKAGE_CACHE);
+        #ifdef __EMSCRIPTEN__
+        EM_ASM(
+            FS.syncfs(function (err) {});
+        );
+        #endif
     });
     ap->set_print_handler([](const std::string& msg) {
         printf("%s\n", msg.c_str());
@@ -417,8 +399,7 @@ void start()
     // TODO: create log and redirect stdout
 #endif
     // read or generate uuid, required by AP
-    std::string uuid = get_uuid();
-    printf("UUID: %s\n", uuid.c_str());
+    printf("UUID: %s\n", ap_get_uuid(UUID_FILE).c_str());
 #if 0
     if (auto_connect_ap) {
         connect_ap(last_host);

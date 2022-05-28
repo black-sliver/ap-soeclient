@@ -24,7 +24,7 @@
 
 #include GAME_H
 
-#define VERSION_TUPLE {0,2,7}
+#define VERSION_TUPLE {0,2,8}
 
 
 /* This is the entry point for our cpp ap client.

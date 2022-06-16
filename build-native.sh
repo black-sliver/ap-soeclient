@@ -10,7 +10,7 @@ BUILD_DIR="build/native"
 CPP="g++"
 
 # clean up
-rm -Rf --one-file-system build
+rm -Rf --one-file-system "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
 if [[ "$1" == "debug" ]]; then

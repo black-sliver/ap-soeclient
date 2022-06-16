@@ -13,7 +13,9 @@
 #define EM_BOOL bool
 #define EM_TRUE true
 #define EM_FALSE false
+#if !defined WIN32 && !defined _WIN32
 #include <poll.h>
+#endif
 #endif
 #include <math.h>
 #include <limits>
@@ -314,8 +316,68 @@ void disconnect_ap()
 
 bool read_command(std::string& cmd)
 {
-#ifdef __EMSCRIPTEN__
+#if defined __EMSCRIPTEN__
     return false;
+#elif defined WIN32 || defined _WIN32
+    static std::string cmd_buf;
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD n = 0;
+    INPUT_RECORD rec;
+    if (!PeekConsoleInputA(hStdin, &rec, 1, &n) || n < 1) return false;
+    if (rec.EventType != KEY_EVENT) {
+        // drop non-key-event
+        ReadConsoleInput(hStdin, &rec, 1, &n);
+        return false;
+    }
+    // read unicode from console buffer
+    WCHAR wBuf[256];
+    wBuf[255] = 0;
+    n = 255;
+    if (!ReadConsoleW(hStdin, wBuf, n, &n, NULL)) {
+        return false;
+    }
+    // convert to utf8
+    int mbSize = WideCharToMultiByte(CP_UTF8, 0, wBuf, n, NULL, 0, NULL, NULL);
+    if (mbSize == 0) {
+        return false;
+    }
+    char *mbBuf = new char[mbSize+1];
+    mbBuf[mbSize] = 0;
+    WideCharToMultiByte(CP_UTF8, 0, wBuf, n, mbBuf, mbSize, NULL, NULL);
+    cmd_buf += mbBuf;
+    delete[] mbBuf;
+    while (!cmd_buf.empty() && (cmd_buf[0] == 0x08 || cmd_buf[0] == '\r' || cmd_buf[0] == '\n' || cmd_buf[0] == 127))
+        cmd_buf = cmd_buf.substr(1);
+    for (size_t i=1; i<cmd_buf.length(); i++) {
+        if (cmd_buf[i] != 0x08) continue;
+        // backspace
+        if ((cmd_buf[i-1] & 0b10000000) == 0) {
+            cmd_buf.erase(i-1, 2);
+            i--;
+        } else if ((cmd_buf[i-2] & 0b11100000) == 0b11000000) {
+            cmd_buf.erase(i-2, 3);
+            i-=2;
+        } else if ((cmd_buf[i-3] & 0b11110000) == 0b11100000) {
+            cmd_buf.erase(i-3, 4);
+            i-=3;
+        } else if ((cmd_buf[i-4] & 0b11111000) == 0b11110000) {
+            cmd_buf.erase(i-4, 5);
+            i-=4;
+        }
+    }
+    WCHAR *wBuf2 = new WCHAR[cmd_buf.length() + 1];
+    wBuf2[0] = 0;
+    MultiByteToWideChar(CP_UTF8, 0, cmd_buf.c_str(), cmd_buf.length() + 1, wBuf2, cmd_buf.length() + 1);
+    wprintf(L"\r                                        \r%ls", wBuf2);
+    delete[] wBuf2;
+    size_t p = cmd_buf.find('\r');
+    if (p != cmd_buf.npos) {
+        cmd = cmd_buf.substr(0, p);
+        cmd_buf = cmd_buf.substr(p+1);
+        printf("\n");
+    }
+    while (!cmd.empty() && (cmd.back() == '\n' || cmd.back() == '\r')) cmd.pop_back();
+    return !cmd.empty();
 #else
     struct pollfd fd = { STDIN_FILENO, POLLIN, 0 };
     int res = poll(&fd, 1, 5);
@@ -453,6 +515,13 @@ int main(int argc, char** argv)
         if (document.location.protocol == 'https:')
             throw 'WSS not supported';
     });
+#endif
+#if defined WIN32 || defined _WIN32
+    DWORD mode = 0;
+    if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &mode)) {
+        mode &= ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_MOUSE_INPUT);
+        SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), mode);
+    }
 #endif
 #ifdef USE_IDBFS
     // mount persistant storage, then run app

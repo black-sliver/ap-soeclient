@@ -7,7 +7,7 @@ LIBS="$LIBS -lidbfs.js -DUSE_IDBFS"
 BUILD_DIR="build/$NAME"
 
 # clean up
-rm -Rf --one-file-system build
+rm -Rf --one-file-system "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
 # debug build

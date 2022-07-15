@@ -344,3 +344,4 @@
     {{0x7e2284, 0x10}, 382}, // #282, Storage room
     {{0x7e2284, 0x08}, 383}, // #283, Storage room
     {{0x7e2284, 0x04}, 384}, // #284, Storage room
+    {{0x7e22e7, 0x40}, 385}, // #285, Energy Core

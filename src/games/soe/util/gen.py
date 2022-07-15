@@ -9,6 +9,7 @@ BOSSES_BASE_NUMBER = 50
 GOURDS_BASE_NUMBER = 100
 NPC_BASE_NUMBER = 400  # not implemented
 SNIFF_BASE_NUMBER = 500  # not implemented
+EXTRA_BASE_NUMBER = 800  # energy core fragment
 TRAP_BASE_NUMBER = 900
 
 alchemy = [  # there is no json for this (yet) :/
@@ -67,6 +68,10 @@ boss_drops = [  # taken from data.h, evermizer wiki and ram map. sadly this can 
     [0x129, "10,000 Gold Coins"],
     [0x206, "Mud Pepper"],
     [0x126, "Diamond Eye"],
+]
+
+extra = [  # taken from data.h. TODO: extract
+    [0x12a, "Energy Core Fragment"],
 ]
 
 traps = [  # taken from data.h. TODO: extract
@@ -148,6 +153,11 @@ def main(src_dir, dst_dir):
                     s = '    {%3d, {%3d, 0x%03x}}, // #%d, %s\n' % (GOURDS_BASE_NUMBER + checknr, amount, prize, checknr, name)
                     fitems.write(s)
                     checknr += 1
+
+            fitems.write('    // extra\n')
+            for n, drop in enumerate(extra, EXTRA_BASE_NUMBER):
+                s = '    {%3d, {%3d, 0x%03x}}, // %s\n' % (n, 1, drop[0], drop[1])
+                fitems.write(s)
 
             fitems.write('    // traps\n')
             for n, drop in enumerate(traps, TRAP_BASE_NUMBER):

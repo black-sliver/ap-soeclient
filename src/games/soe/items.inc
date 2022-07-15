@@ -150,7 +150,7 @@
     {197, {  1, 0x807}}, // #97, Call bead
     {198, {  1, 0x200}}, // #98, Wax
     {199, {  1, 0x807}}, // #99, Call bead
-    {200, {  1, 0x1f4}}, // #100, Progressive breast
+    {200, {  1, 0x1f4}}, // #100, Progressive vest
     {201, {  1, 0x1f5}}, // #101, Progressive gloves
     {202, {  1, 0x1f6}}, // #102, Progressive helmet
     {203, {  3, 0x201}}, // #103, 3 Water
@@ -272,7 +272,7 @@
     {319, {  3, 0x200}}, // #219, 3 Wax
     {320, {  6, 0x201}}, // #220, 6 Water
     {321, {  2, 0x211}}, // #221, 2 Brimstone
-    {322, {  1, 0x1f4}}, // #222, Progressive breast
+    {322, {  1, 0x1f4}}, // #222, Progressive vest
     {323, {  6, 0x202}}, // #223, 6 Vinegar
     {324, {  3, 0x20d}}, // #224, 3 Ethanol
     {325, {  8, 0x214}}, // #225, 8 Ash
@@ -326,15 +326,18 @@
     {373, {  2, 0x215}}, // #273, 2 Acorns
     {374, {  1, 0x11c}}, // #274, Laser Lance
     {375, { 31, 0x1e3}}, // #275, 30 Cryo Blast
-    {376, {  1, 0x1f4}}, // #276, Progressive breast
+    {376, {  1, 0x1f4}}, // #276, Progressive vest
     {377, {  1, 0x1f6}}, // #277, Progressive helmet
     {378, {  3, 0x207}}, // #278, 3 Meteorite
-    {379, { 31, 0x1e2}}, // #279, 30 Particle Bombs or Nectar?
+    {379, { 31, 0x1e2}}, // #279, 30 Particle Bombs
     {380, {  1, 0x1f5}}, // #280, Progressive gloves
     {381, { 31, 0x1e1}}, // #281, 30 Thunderballs
     {382, {  1, 0x802}}, // #282, Honey
     {383, {  1, 0x118}}, // #283, Atom Smasher
     {384, {  4, 0x20e}}, // #284, 4 Dry Ice
+    {385, {  1, 0x128}}, // #285, Energy Core
+    // extra
+    {800, {  1, 0x12a}}, // Energy Core Fragment
     // traps
     {900, {  1, 0x151}}, // Quake Trap
     {901, {  1, 0x152}}, // Poison Trap

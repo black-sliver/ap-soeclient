@@ -19,5 +19,12 @@ if [[ "$1" == "debug" ]]; then
 else
   # release build
   $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME.exe" -fexceptions -Os # -flto
+  OLD_CWD=`pwd`
+  # remove unused files
+  cd "$BUILD_DIR"
+  # package zip
+  7z -mx=9 a "../${NAME}_win64.zip" *.exe
+  # done
+  cd $OLD_CWD
 fi
 

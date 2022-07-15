@@ -19,5 +19,6 @@ if [[ "$1" == "debug" ]]; then
 else
   # release build
   $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME" -fexceptions -Os -flto
+  cp LICENSE "$BUILD_DIR/"
 fi
 

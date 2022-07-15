@@ -56,7 +56,10 @@ if [[ "$1" != "debug" ]]; then
   rm *.min.html.* # remove precompressed html, let the server handle that
   # package zip
   cd ..
-  7z -mx=9 a "$NAME.zip" *
+  7z -mx=9 a "${NAME}_wasm.zip" soeclient
+  if [ -x `which advzip` ]; then
+    advzip -z -4 "${NAME}_wasm.zip"
+  fi
   # done
   cd $OLD_CWD
 fi

@@ -24,6 +24,9 @@ else
   cd "$BUILD_DIR"
   # package zip
   7z -mx=9 a "../${NAME}_win64.zip" *.exe
+  if [ -x `which advzip` ]; then
+    advzip -z -4 "../${NAME}_win64.zip"
+  fi
   # done
   cd $OLD_CWD
 fi

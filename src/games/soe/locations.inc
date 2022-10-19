@@ -52,9 +52,9 @@
     {{0x7e225c, 0x10},   65}, // volcano viper commander
     {{0x7e2260, 0x40},   66}, // magmar
     {{0x7e225c, 0x20},   67}, // mad monk
-//  {{0x7e22e9, 0x40},   68}, // mini taur
-//  {{0x7e22d9, 0x08},   69}, // aegis
-//  {{0x7e22e6, 0x01},   70}, // footknight
+    {{0x7e22e6, 0x01},   68}, // footknight
+//  {{0x7e22e9, 0x40},   69}, // mini taur
+//  {{0x7e22d9, 0x08},   70}, // aegis
 //  {{0x7e22dd, 0x02},   71}, // sterling
 //  {{0x7e22e6, 0x80},   72}, // wall face
 //  {{0x7e22f1, 0x40},   73}, // carltron's robot

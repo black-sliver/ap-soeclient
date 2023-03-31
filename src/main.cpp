@@ -38,11 +38,6 @@
  *   Game event handling is set in create_game() below, which will be called the first time a SNES (emu) is connected
  */
 
-/* ABSOLUTELY REQUIRED TODO:
- * implement status update in APClient
- * test snex9x-rr + lua bridge + SNI <- SNI bug reading wrong address
- */
-
 /* TODO:
  * seed/slot should come from a copy in RAM (not ROM) in future to support more EMUs
  * test that changing ROM (seed/slot) always invalidates (reset()) game
@@ -307,7 +302,7 @@ void create_game()
         if (!ap) return;
         deathtime = ap->get_server_time();
         json data{
-            {"time", deathtime}, // TODO: insert time here
+            {"time", deathtime},
             {"cause", "Evermore."},
             {"source", ap->get_slot()},
         };
@@ -391,7 +386,7 @@ bool read_command(std::string& cmd)
     int res = poll(&fd, 1, 5);
     if (res && fd.revents) {
         cmd.resize(1024);
-        if (fgets(cmd.data(), cmd.size(), stdin)) {
+        if (fgets((char*)cmd.data(), cmd.size(), stdin)) {
             cmd.resize(strlen(cmd.data()));
             while (!cmd.empty() && (cmd.back() == '\n' || cmd.back() == '\r')) cmd.pop_back();
             return !cmd.empty();

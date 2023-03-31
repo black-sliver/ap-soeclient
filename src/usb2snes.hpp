@@ -17,11 +17,19 @@ class USB2SNES {
 protected:
     typedef nlohmann::json json;
     typedef wswrap::WS WS;
+    static constexpr char DEFAULT_URI[] = "ws://localhost:23074";
+    static constexpr char LEGACY_URI[] = "ws://localhost:8080";
 
 public:
-    USB2SNES(const std::string& uri="ws://localhost:8080")
+    USB2SNES(const std::string& uri=DEFAULT_URI)
     {
-        _uri = uri;
+        if (uri == DEFAULT_URI)
+            _uri = LEGACY_URI; // connect will swap it
+        else if (uri == LEGACY_URI)
+            _uri = DEFAULT_URI;
+        else
+            _uri = uri; // non-default
+
         connect_socket();
     }
 
@@ -332,6 +340,13 @@ private:
     {
         delete _ws;
         _ws = nullptr;
+
+        if (_uri == DEFAULT_URI) {
+            _uri = LEGACY_URI;
+        } else if (_uri == LEGACY_URI) {
+            _uri = DEFAULT_URI;
+        }
+
         if (_uri.empty()) {
             _state = State::DISCONNECTED;
             return;

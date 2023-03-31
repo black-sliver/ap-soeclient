@@ -64,6 +64,8 @@ double deathtime = -1;
 
 #if __cplusplus < 201500L
 decltype(APClient::DEFAULT_URI) constexpr APClient::DEFAULT_URI;  // c++14 needs a proper declaration
+decltype(USB2SNES::DEFAULT_URI) constexpr USB2SNES::DEFAULT_URI;
+decltype(USB2SNES::LEGACY_URI) constexpr USB2SNES::LEGACY_URI;
 #endif
 
 #ifdef __EMSCRIPTEN__

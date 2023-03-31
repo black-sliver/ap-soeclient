@@ -87,7 +87,12 @@ public:
 
     void poll()
     {
-        if (_ws) _ws->poll();
+        if (_ws && _state == State::DISCONNECTED) {
+            delete _ws;
+            _ws = nullptr;
+        } else if (_ws) {
+            _ws->poll();
+        }
         if (_state < State::SOCKET_CONNECTED) { // TODO: == DISCONNECTED ?
             auto t = now();
             if (t - _lastSocketConnect > _socketReconnectInterval) {
@@ -193,8 +198,6 @@ private:
             if (_hOnSocketDisconnected) _hOnSocketDisconnected();
         }
         _state = State::DISCONNECTED;
-        delete _ws;
-        _ws = nullptr;
     }
 
     void onmessage(const std::string& s)

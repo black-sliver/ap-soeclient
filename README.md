@@ -42,3 +42,14 @@ see `build.sh`
   * be connected to AP host while the outro is running
   * or connect to AP host with the outro still running
 * some text clean-up
+
+## Attribution
+
+Check [the source](https://github.com/black-sliver/ap-soeclient/) for all referenced projects.
+
+Binary distributions may include or link to
+
+* [OpenSSL](https://github.com/openssl/openssl)
+* [ASIO](https://github.com/chriskohlhoff/asio)
+* [WebSocketPP](https://github.com/zaphoyd/websocketpp)
+* [Curl's CA Extract](https://curl.se/docs/caextract.html)

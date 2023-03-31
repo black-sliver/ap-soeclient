@@ -62,14 +62,21 @@ std::string password;
 bool ap_connect_sent = false; // TODO: move to APClient::State ?
 double deathtime = -1;
 
+#if __cplusplus < 201500L
+decltype(APClient::DEFAULT_URI) constexpr APClient::DEFAULT_URI;  // c++14 needs a proper declaration
+#endif
 
 #ifdef __EMSCRIPTEN__
-#define DATAPACKAGE_CACHE "/settings/datapackage.json"
+#define VIRTUAL_HOME_DIR "/settings"
+#define OLD_DATAPACKAGE_CACHE "/settings/datapackage.json"
 #define UUID_FILE "/settings/uuid"
+#define CERT_STORE "" // not required in a browser context
 #else
-#define DATAPACKAGE_CACHE "datapackage.json" // TODO: place in %appdata%
+#define OLD_DATAPACKAGE_CACHE "datapackage.json"
 #define UUID_FILE "uuid" // TODO: place in %appdata%
+#define CERT_STORE "cacert.pem"
 #endif
+
 
 bool isEqual(double a, double b)
 {
@@ -107,18 +114,18 @@ void connect_ap(std::string uri="")
 
     if (ap) delete ap;
     ap = nullptr;
-    if (!uri.empty() && uri.find("ws://") != 0 && uri.find("wss://") != 0) uri = "ws://"+uri;
+
+    // TODO: for emscripten, if html is loaded from https, ws:// will not work. Show a proper error
 
     printf("Connecting to AP...\n");
-    if (uri.empty()) ap = new APClient(uuid, GAME::Name);
-    else ap = new APClient(uuid, GAME::Name, uri);
+    ap = new APClient(uuid, GAME::Name, uri.empty() ? APClient::DEFAULT_URI : uri, CERT_STORE);
 
     // clear game's cache. read below on socket_connected_handler
     if (game) game->clear_cache();
 
     // load DataPackage cache
     try {
-        ap->set_data_package_from_file(DATAPACKAGE_CACHE);
+        ap->set_data_package_from_file(OLD_DATAPACKAGE_CACHE);
     } catch (std::exception) { /* ignore */ }
 
     // set state and callbacks
@@ -182,7 +189,6 @@ void connect_ap(std::string uri="")
         }
     });
     ap->set_data_package_changed_handler([](const json& data) {
-        ap->save_data_package(DATAPACKAGE_CACHE);
         #ifdef __EMSCRIPTEN__
         EM_ASM(
             FS.syncfs(function (err) {});
@@ -523,6 +529,10 @@ int main(int argc, char** argv)
         SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), mode);
     }
 #endif
+#ifdef VIRTUAL_HOME_DIR
+    // override home. used to default to persistent storage with emscripten
+    setenv("HOME", VIRTUAL_HOME_DIR, true);
+#endif
 #ifdef USE_IDBFS
     // mount persistant storage, then run app
     EM_ASM({
@@ -535,6 +545,7 @@ int main(int argc, char** argv)
 #else
     start();
 #endif
+
     return 0;
 }
 

@@ -2,7 +2,6 @@
 
 This is the [Archipelago Multiworld](https://github.com/ArchipelagoMW/Archipelago)
 client for the Secret of Evermore world.
-This is still in beta, but should mostly work.
 
 ## How does it work
 
@@ -22,7 +21,7 @@ should be able to receive items, use `/force-send` command to ignore the lock.
 
 ## How to build it
 
-see `build.sh`
+see `build-*.sh`
 
 ## Local storage
 
@@ -53,3 +52,5 @@ Binary distributions may include or link to
 * [ASIO](https://github.com/chriskohlhoff/asio)
 * [WebSocketPP](https://github.com/zaphoyd/websocketpp)
 * [Curl's CA Extract](https://curl.se/docs/caextract.html)
+* [nlohmann::json](https://github.com/nlohmann/json)
+* [valijson](https://github.com/tristanpenman/valijson)

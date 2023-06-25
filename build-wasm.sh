@@ -1,5 +1,7 @@
 #!/bin/bash
 # TODO: replace this by a Makefile
+# NOTES:
+# - using -sALLOW_MEMORY_GROWTH now since there have been asyncs that blew the default limit of 16MB
 
 source build.cfg
 
@@ -12,12 +14,12 @@ mkdir -p "$BUILD_DIR"
 
 # debug build
 if [[ "$1" == "debug" ]] || [[ "$1" == "stat" ]]; then
-  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.html" -fexceptions || exit 1
+  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.html" -fexceptions -Og -flto -sASSERTIONS -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=1024 || exit 1
 fi
 
 # release build
 if [[ "$1" != "debug" ]]; then
-  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.min.html" -fexceptions -Oz -flto || exit 1
+  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.min.html" -fexceptions -Oz -flto -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=1024MB || exit 1
   # pre-compress to be served through .htaccess overrides
   brotli -k -q 11 "$BUILD_DIR/$NAME.min.wasm" "$BUILD_DIR/$NAME.min.js" "$BUILD_DIR/$NAME.min.html"
   gzip -k -9 "$BUILD_DIR/$NAME.min.wasm" "$BUILD_DIR/$NAME.min.js" "$BUILD_DIR/$NAME.min.html"

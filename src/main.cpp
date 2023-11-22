@@ -225,9 +225,9 @@ void connect_ap(std::string uri="")
             return;
         }
         for (const auto& item: items) {
-            std::string itemname = ap->get_item_name(item.item);
+            std::string itemname = ap->get_item_name(item.item, ap->get_player_game(ap->get_player_number()));
             std::string sender = ap->get_player_alias(item.player);
-            std::string location = ap->get_location_name(item.location);
+            std::string location = ap->get_location_name(item.location, ap->get_player_game(item.player));
             printf("  #%d: %s (%" PRId64 ") from %s - %s\n",
                    item.index, itemname.c_str(), item.item,
                    sender.c_str(), location.c_str());

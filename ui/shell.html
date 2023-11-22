@@ -298,11 +298,11 @@
       window.onerror = function(text,f,ln,col,e) {
         console.error(text);
         log(text);
-        if (e == 'WSS not supported') {
+        if (e == 'WS not supported' || e instanceof SecurityError) {
             document.getElementById('stdin').disabled = true;
             var url = document.location.href.replace("https:","http:");
             document.getElementById('output').insertAdjacentHTML('beforeend',
-                ' <span class="exception">SSL not yet supported by AP websocket. Please use the <a href="'+url+'">http version</a>.');
+                ' <span class="exception">Unencrypted connection is not supported from https. Please try the <a href="'+url+'">http version</a>.');
         } else {
             Module.setStatus('Exception thrown, see JavaScript console');
             spinnerElement.style.display = 'none';

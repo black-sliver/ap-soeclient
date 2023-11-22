@@ -56,6 +56,11 @@ Game* game = nullptr;
 std::string password;
 bool ap_connect_sent = false; // TODO: move to APClient::State ?
 double deathtime = -1;
+bool is_https = false; // set to true if the context only supports wss://
+bool is_wss = false; // set to true if the connection specifically asked for wss://
+bool is_ws = false; // set to true if the connection specifically asked for ws://
+unsigned connect_error_count = 0;
+
 
 #if __cplusplus < 201500L
 decltype(APClient::DEFAULT_URI) constexpr APClient::DEFAULT_URI;  // c++14 needs a proper declaration
@@ -104,6 +109,13 @@ void bad_slot(const std::string& gameSlot)
         gameSlot.c_str());
 }
 
+void disconnect_ap()
+{
+    if (ap) delete ap;
+    ap = nullptr;
+    set_status_color("ap", "#777777");
+}
+
 void connect_ap(std::string uri="")
 {
     // read or generate uuid, required by AP
@@ -112,7 +124,18 @@ void connect_ap(std::string uri="")
     if (ap) delete ap;
     ap = nullptr;
 
-    // TODO: for emscripten, if html is loaded from https, ws:// will not work. Show a proper error
+    is_ws = uri.rfind("ws://", 0) == 0;
+    is_wss = uri.rfind("wss://", 0) == 0;
+
+    #ifdef __EMSCRIPTEN__
+    if (is_https && is_ws) {
+        EM_ASM({
+            throw 'WS not supported';
+        });
+    } else if (is_https && !is_wss) {
+        uri = "wss://" + uri; // only wss supported
+    }
+    #endif
 
     printf("Connecting to AP...\n");
     ap = new APClient(uuid, GAME::Name, uri.empty() ? APClient::DEFAULT_URI : uri, CERT_STORE);
@@ -127,6 +150,7 @@ void connect_ap(std::string uri="")
 
     // set state and callbacks
     ap_sync_queued = false;
+    connect_error_count = 0;
     set_status_color("ap", "#ff0000");
     ap->set_socket_connected_handler([](){
         // if the socket (re)connects we actually don't know the server's state. clear game's cache to not desync
@@ -136,6 +160,24 @@ void connect_ap(std::string uri="")
     });
     ap->set_socket_disconnected_handler([](){
         set_status_color("ap", "#ff0000");
+    });
+    ap->set_socket_error_handler([](const std::string& error) {
+        connect_error_count++;
+        #ifdef __EMSCRIPTEN__
+        set_status_color("ap", "#ff0000");
+        if (is_https && !is_wss) {
+            if (connect_error_count == 2) {
+                printf("Error: could not connect to AP server! "
+                       "Please check if the room is active and the port is correct.\n"
+                       "You have to use the http:// version of ap-soeclient for non-SSL rooms.\n");
+            } else if (connect_error_count > 2) {
+                disconnect_ap();
+            }
+        }
+        #else
+        if (!error.empty() && error != "Unknown")
+            printf("%s\n", error.c_str());
+        #endif
     });
     ap->set_room_info_handler([](){
         // compare seeds and error out if it's the wrong one, and then (try to) connect with games's slot
@@ -310,13 +352,6 @@ void create_game()
     });
 }
 
-void disconnect_ap()
-{
-    if (ap) delete ap;
-    ap = nullptr;
-    set_status_color("ap", "#777777");
-}
-
 bool read_command(std::string& cmd)
 {
 #if defined __EMSCRIPTEN__
@@ -465,11 +500,6 @@ void start()
 #endif
     // read or generate uuid, required by AP
     printf("UUID: %s\n", ap_get_uuid(UUID_FILE).c_str());
-#if 0
-    if (auto_connect_ap) {
-        connect_ap(last_host);
-    }
-#endif
 
     printf("Connecting to SNES...\n");
     set_status_color("snes", "#ff0000");
@@ -514,9 +544,8 @@ void start()
 int main(int argc, char** argv)
 {
 #ifdef __EMSCRIPTEN__
-    EM_ASM({
-        if (document.location.protocol == 'https:')
-            throw 'WSS not supported';
+    is_https = EM_ASM_INT({
+        return (document.location.protocol == 'https:');
     });
 #endif
 #if defined WIN32 || defined _WIN32

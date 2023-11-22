@@ -193,6 +193,7 @@ void connect_ap(std::string uri="")
         }
     });
     ap->set_slot_connected_handler([](const json&){
+        game->set_deathlink(game->want_deathlink());
         set_status_color("ap", "#00ff00");
     });
     ap->set_slot_disconnected_handler([](){

@@ -163,15 +163,18 @@ protected:
                     }
                 }
             });
-            if (_deathlink) _snes->read_memory(BOY_HP_LOC, 2, [this](const std::string& res) {
-                if (res[0] == 0 && res[1] == 0) {
-                    if (!_dead) {
+            if (_deathlink) _snes->read_memory(BOY_HP_LOC, 4, [this](const std::string& res) {
+                uint16_t hp = (uint16_t)res[1] << 8 | res[0];
+                uint16_t extra = (uint16_t)res[3] << 8 | res[2];
+                if (hp == 0) {
+                    if (!_dead && extra != 0) { // checking extra values to not detect soft reset
                         _dead = true;
                         if (now() - _lastDeathlinkDeath > 5000) {
                             // if we die within 5 seconds of deathlink completion,
                             // don't send deathlink for it
                             if (_hOnDeath) _hOnDeath();
                         }
+                        log("You died.");
                     }
                 } else {
                     _dead = false;

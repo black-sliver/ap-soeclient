@@ -109,6 +109,11 @@ void bad_slot(const std::string& gameSlot)
         gameSlot.c_str());
 }
 
+void slot_changed(const std::string&, const std::string&)
+{
+    printf("Slot changed. Disconnecting.\n");
+}
+
 void disconnect_ap()
 {
     if (ap) delete ap;
@@ -183,9 +188,10 @@ void connect_ap(std::string uri="")
         // compare seeds and error out if it's the wrong one, and then (try to) connect with games's slot
         if (!game || game->get_seed().empty() || game->get_slot().empty())
             printf("Waiting for game ...\n");
-        else if (strncmp(game->get_seed().c_str(), ap->get_seed().c_str(), GAME::MAX_SEED_LENGTH) != 0)
+        else if (strncmp(game->get_seed().c_str(), ap->get_seed().c_str(), GAME::MAX_SEED_LENGTH) != 0) {
             bad_seed(ap->get_seed(), game->get_seed());
-        else {
+            game->reset();
+        } else {
             std::list<std::string> tags;
             if (game->want_deathlink()) tags.push_back("DeathLink");
             ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags, VERSION_TUPLE);
@@ -285,12 +291,14 @@ void create_game()
             {
                 bad_seed(ap->get_seed(), game->get_seed());
                 ap->reset();
+                game->reset();
                 return;
             }
             else if (game->get_slot() != ap->get_slot())
             {
-                printf("Slot changed, disconnecting.\n");
+                slot_changed(ap->get_slot(), game->get_slot());
                 ap->reset();
+                game->reset();
                 return;
             }
             else if (game->get_deathlink() != game->want_deathlink()) {
@@ -305,6 +313,7 @@ void create_game()
                     strncmp(game->get_seed().c_str(), ap->get_seed().c_str(), GAME::MAX_SEED_LENGTH) != 0)
             {
                 bad_seed(ap->get_seed(), game->get_seed());
+                game->reset();
                 return;
             }
             else

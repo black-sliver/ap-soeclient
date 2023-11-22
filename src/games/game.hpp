@@ -101,6 +101,8 @@ public:
                         _slot = slot;
                         _state = State::RUNNING;
                         if (_hOnGameStarted) _hOnGameStarted();
+                        if (_seed.empty() || _slot.empty()) // onGameStarted disconnected us
+                            return;
                         log(("running, seed \"" + _seed + "\", slot \""+ _slot + "\"").c_str());
                     }
                 });

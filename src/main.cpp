@@ -53,13 +53,13 @@ APClient* ap = nullptr;
 bool ap_sync_queued = false;
 USB2SNES* snes = nullptr;
 Game* game = nullptr;
-std::string password;
 bool ap_connect_sent = false; // TODO: move to APClient::State ?
 double deathtime = -1;
 bool is_https = false; // set to true if the context only supports wss://
 bool is_wss = false; // set to true if the connection specifically asked for wss://
 bool is_ws = false; // set to true if the connection specifically asked for ws://
 unsigned connect_error_count = 0;
+bool awaiting_password = false;
 
 
 #if __cplusplus < 201500L
@@ -121,6 +121,30 @@ void disconnect_ap()
     set_status_color("ap", "#777777");
 }
 
+void ask_password()
+{
+    printf("Enter Password\n");
+    awaiting_password = true;
+}
+
+void abort_password()
+{
+    awaiting_password = false;
+}
+
+void connect_slot(const std::string& password)
+{
+    if (game && ap) {
+        std::list<std::string> tags;
+        if (game->want_deathlink())
+            tags.push_back("DeathLink");
+        ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags, VERSION_TUPLE);
+        ap_connect_sent = true; // TODO: move to APClient::State ?
+    } else {
+        printf("Connection lost!\n");
+    }
+}
+
 void connect_ap(std::string uri="")
 {
     // read or generate uuid, required by AP
@@ -162,9 +186,11 @@ void connect_ap(std::string uri="")
         // TODO: in future set game's location cache from AP's checked_locations instead
         if (game) game->clear_cache();
         set_status_color("ap", "#ffff00");
+        abort_password();
     });
     ap->set_socket_disconnected_handler([](){
         set_status_color("ap", "#ff0000");
+        abort_password();
     });
     ap->set_socket_error_handler([](const std::string& error) {
         connect_error_count++;
@@ -191,11 +217,10 @@ void connect_ap(std::string uri="")
         else if (strncmp(game->get_seed().c_str(), ap->get_seed().c_str(), GAME::MAX_SEED_LENGTH) != 0) {
             bad_seed(ap->get_seed(), game->get_seed());
             game->reset();
+        } else if (ap->has_password()) {
+            ask_password();
         } else {
-            std::list<std::string> tags;
-            if (game->want_deathlink()) tags.push_back("DeathLink");
-            ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags, VERSION_TUPLE);
-            ap_connect_sent = true; // TODO: move to APClient::State ?
+            connect_slot("");
         }
     });
     ap->set_slot_connected_handler([](const json&){
@@ -315,19 +340,16 @@ void create_game()
                 bad_seed(ap->get_seed(), game->get_seed());
                 game->reset();
                 return;
-            }
-            else
-            {
-                std::list<std::string> tags;
-                game->set_deathlink(game->want_deathlink());
-                if (game->get_deathlink()) tags.push_back("DeathLink");
-                ap->ConnectSlot(game->get_slot(), password, game->get_items_handling(), tags, VERSION_TUPLE);
-                ap_connect_sent = true; // TODO: move to APClient::State ?
+            } else if (ap->has_password()) {
+                ask_password();
+            } else {
+                connect_slot("");
             }
         }
     });
     game->set_game_stopped_handler([]() {
         set_status_color("game", "#ff0000");
+        abort_password();
     });
     game->set_game_joined_handler([]() {
         set_status_color("game", "#00ff00");
@@ -360,6 +382,12 @@ void create_game()
         };
         ap->Bounce(data, {}, {}, {"DeathLink"});
     });
+}
+
+void password_entered(const std::string& password)
+{
+    awaiting_password = false;
+    connect_slot(password);
 }
 
 bool read_command(std::string& cmd)
@@ -443,7 +471,9 @@ bool read_command(std::string& cmd)
 
 void on_command(const std::string& command)
 {
-    if (command == "/help") {
+    if (awaiting_password) {
+        password_entered(command);
+    } else if (command == "/help") {
         printf("Available commands:\n"
                "  /connect [addr[:port]] - connect to AP server\n"
                "  /disconnect - disconnect from AP server\n"
@@ -520,17 +550,21 @@ void start()
     snes->set_socket_disconnected_handler([](){
         set_status_color("snes", "#ff0000");
         // NOTE: we don't destroy game here since we can't cancel pending SNES callbacks (yet)
-        if (game) game->reset();
+        if (game)
+            game->reset();
         set_status_color("game", "#777777");
+        abort_password();
     });
     snes->set_snes_connected_handler([](){
         set_status_color("snes", "#00ff00");
-        if (!game) create_game();
+        if (!game)
+            create_game();
     });
     snes->set_snes_disconnected_handler([](){
         set_status_color("snes", "#ffff00");
         // NOTE: we don't destroy game here since we can't cancel pending SNES callbacks (yet)
-        if (game) game->reset();
+        if (game)
+            game->reset();
         set_status_color("game", "#777777");
     });
 

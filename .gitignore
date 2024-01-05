@@ -2,3 +2,4 @@ build
 datapackage.json
 uuid
 /.idea
+/util/*.pem

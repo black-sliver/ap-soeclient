@@ -147,15 +147,17 @@ void connect_slot(const std::string& password)
 
 void connect_ap(std::string uri="")
 {
-    // read or generate uuid, required by AP
-    std::string uuid = ap_get_uuid(UUID_FILE);
-
-    if (ap) delete ap;
-    ap = nullptr;
     ap.reset();
 
     is_ws = uri.rfind("ws://", 0) == 0;
     is_wss = uri.rfind("wss://", 0) == 0;
+
+    // remove schema from URI for UUID generation; UUID is per room this way
+    std::string uuid = ap_get_uuid(UUID_FILE,
+            uri.empty() ? APClient::DEFAULT_URI :
+            is_ws ? uri.substr(5) :
+            is_wss ? uri.substr(6) :
+            uri);
 
     #ifdef __EMSCRIPTEN__
     if (is_https && is_ws) {
@@ -168,7 +170,8 @@ void connect_ap(std::string uri="")
     #endif
 
     printf("Connecting to AP...\n");
-    ap = new APClient(uuid, GAME::Name, uri.empty() ? APClient::DEFAULT_URI : uri, CERT_STORE);
+    ap.reset(new APClient(uuid, GAME::Name, uri.empty() ? APClient::DEFAULT_URI : uri, CERT_STORE));
+
 
     // clear game's cache. read below on socket_connected_handler
     if (game) game->clear_cache();
@@ -538,8 +541,6 @@ void start()
 #ifndef __EMSCRIPTEN__ // HTML GUI has its own log
     // TODO: create log and redirect stdout
 #endif
-    // read or generate uuid, required by AP
-    printf("UUID: %s\n", ap_get_uuid(UUID_FILE).c_str());
 
     printf("Connecting to SNES...\n");
     set_status_color("snes", "#ff0000");

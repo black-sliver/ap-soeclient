@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <algorithm>
+#include <memory>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -49,10 +50,10 @@
 using nlohmann::json;
 
 
-APClient* ap = nullptr;
+std::unique_ptr<APClient> ap;
 bool ap_sync_queued = false;
-USB2SNES* snes = nullptr;
-Game* game = nullptr;
+std::unique_ptr<USB2SNES> snes;
+std::unique_ptr<Game> game;
 bool ap_connect_sent = false; // TODO: move to APClient::State ?
 double deathtime = -1;
 bool is_https = false; // set to true if the context only supports wss://
@@ -116,8 +117,7 @@ void slot_changed(const std::string&, const std::string&)
 
 void disconnect_ap()
 {
-    if (ap) delete ap;
-    ap = nullptr;
+    ap.reset();
     set_status_color("ap", "#777777");
 }
 
@@ -152,6 +152,7 @@ void connect_ap(std::string uri="")
 
     if (ap) delete ap;
     ap = nullptr;
+    ap.reset();
 
     is_ws = uri.rfind("ws://", 0) == 0;
     is_wss = uri.rfind("wss://", 0) == 0;
@@ -300,11 +301,10 @@ void connect_ap(std::string uri="")
 
 void create_game()
 {
-    if (game) delete game;
-    game = nullptr;
+    game.reset();
     
     printf("Instantiating \"%s\" game...\n", GAME::Name);
-    game = new GAME(snes);
+    game.reset(new GAME(snes.get()));
     set_status_color("game", "#ff0000");
     game->set_game_started_handler([]() {
         game->clear_cache(); // is this good enough?
@@ -543,7 +543,7 @@ void start()
 
     printf("Connecting to SNES...\n");
     set_status_color("snes", "#ff0000");
-    snes = new USB2SNES();
+    snes.reset(new USB2SNES());
     snes->set_socket_connected_handler([](){
         set_status_color("snes", "#ffff00");
     });

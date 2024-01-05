@@ -8,6 +8,7 @@
 #include <functional>
 #include <time.h>
 #include <algorithm>
+#include <memory>
 
 
 //#define USB2SNES_DEBUG // to get debug output
@@ -44,8 +45,7 @@ public:
             if (_hOnSocketDisconnected) _hOnSocketDisconnected();
         }
         _state = State::DISCONNECTED;
-        delete _ws;
-        _ws = nullptr;
+        _ws.reset();
     }
     
     enum class State {
@@ -96,8 +96,7 @@ public:
     void poll()
     {
         if (_ws && _state == State::DISCONNECTED) {
-            delete _ws;
-            _ws = nullptr;
+            _ws.reset();
         } else if (_ws) {
             _ws->poll();
         }
@@ -338,8 +337,7 @@ private:
 
     void connect_socket()
     {
-        delete _ws;
-        _ws = nullptr;
+        _ws.reset();
 
         if (_uri == DEFAULT_URI) {
             _uri = LEGACY_URI;
@@ -354,12 +352,12 @@ private:
         _state = State::SOCKET_CONNECTING;
         while (!_txQueue.empty()) _txQueue.pop(); // TODO: run error handlers?
         _rxBuffer.clear();
-        _ws = new WS(_uri,
+        _ws.reset(new WS(_uri,
                 [this]() { onopen(); },
                 [this]() { onclose(); },
                 [this](const std::string& s) { onmessage(s); },
                 [this]() { onerror(); }
-        );
+        ));
         _lastSocketConnect = now();
         _socketReconnectInterval *= 2;
         // NOTE: browsers have a very badly implemented connection rate limit
@@ -391,7 +389,7 @@ private:
     }
 
     std::string _uri;
-    WS* _ws = nullptr;
+    std::unique_ptr<WS> _ws;
     State _state = State::DISCONNECTED;
     std::queue<TxItem> _txQueue;
     std::string _rxBuffer;

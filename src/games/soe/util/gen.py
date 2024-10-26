@@ -8,9 +8,9 @@ ALCHEMY_BASE_NUMBER = 0
 BOSSES_BASE_NUMBER = 50
 GOURDS_BASE_NUMBER = 100
 NPC_BASE_NUMBER = 400  # not implemented
-SNIFF_BASE_NUMBER = 500  # not implemented
 EXTRA_BASE_NUMBER = 800  # energy core fragment
 TRAP_BASE_NUMBER = 900
+SNIFF_BASE_NUMBER = 1000
 
 alchemy = [  # there is no json for this (yet) :/
     # [itemid, name, [addr,mask]
@@ -163,6 +163,38 @@ def main(src_dir, dst_dir):
             for n, drop in enumerate(traps, TRAP_BASE_NUMBER):
                 s = '    {%3d, {%3d, 0x%03x}}, // %s\n' % (n, 1, drop[0], drop[1])
                 fitems.write(s)
+
+            with codecs.open(os.path.join(src_dir, 'sniff.csv'), 'r', encoding='utf-8') as fin:
+                if version_info[0]==2: # sadly py2 CSV is bytes, py3 CSV is unicode
+                    src = fin.read().encode('ascii', 'replace').replace('\r\n', '\n')
+                else:
+                    src = fin.read().replace('\r\n', '\n')
+                data = csv.reader(src.split('\n'))
+                next(data) # skip header
+                checknr=0
+                floc.write('    // sniff\n')
+                fitems.write('    // sniff\n')
+                item_ids = set()
+                for row in data:
+                    # NOTE: we include (currently) unreachable stuff in the client
+                    if not row:
+                        continue
+                    csv_checknr = int(row[0])
+                    assert(csv_checknr == checknr)
+                    addr,mask = row[5].split('&')
+                    addr = '0x7e' + addr[1:]
+                    s = '    {{%s, %s}, %3d}, // #%d, %s\n' % (addr, mask, SNIFF_BASE_NUMBER + checknr, checknr, row[1])
+                    floc.write(s)
+                    prize = int(row[6], 0)
+                    # NOTE: sniff spots have no amount
+                    # NOTE: sniff items work differently: the id = base + (prize & 0x3ff)
+                    name = row[7]
+                    item_id = SNIFF_BASE_NUMBER + (prize & 0x3ff)
+                    if item_id not in item_ids:
+                        s = '    {%3d, {%3d, 0x%03x}}, // #%d, %s\n' % (item_id, 1, prize, checknr, name)
+                        item_ids.add(item_id)
+                        fitems.write(s)
+                    checknr += 1
 
 
 if __name__ == '__main__':

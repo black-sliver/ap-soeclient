@@ -22,3 +22,27 @@ jobs:
       - name: Build
         run: |
           ./build-native.sh
+
+  build-windows:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install MSYS ${{matrix.sys}} + gcc
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          # update: true
+          pacboy: openssl:p pkg-config:p gcc:p binutils:p advancecomp:p
+
+      - name: Build Static
+        run: |
+          ./build-native.sh static

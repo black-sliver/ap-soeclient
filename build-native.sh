@@ -13,6 +13,37 @@ CPP="g++"
 rm -Rf --one-file-system "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
+# detect OS
+if [ -z "$OS_NAME" ]; then
+    case $(uname | tr '[:upper:]' '[:lower:]') in
+        linux*)
+            OS_NAME=linux
+            ;;
+        darwin*)
+            OS_NAME=macos
+            ;;
+        msys*)
+            OS_NAME=windows
+            ;;
+        cygwin*)
+            OS_NAME=windows
+            ;;
+        mingw*)
+            OS_NAME=windows
+            ;;
+        *)
+            OS_NAME=other
+    esac
+fi
+
+if [[ "$1" == "static" ]]; then
+  LIBS="-static -Wl,-Bstatic $LIBS -static-libgcc -static-libstdc++"
+fi
+
+if [[ "$OS_NAME" == "windows" ]]; then
+  LIBS="$LIBS -lcrypt32 -lws2_32"
+fi
+
 echo "Building ..."
 if [[ "$1" == "debug" ]]; then
   # debug build

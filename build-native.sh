@@ -8,6 +8,7 @@ DEFINES="$DEFINES -DASIO_STANDALONE -DWSWRAP_SEND_EXCEPTIONS" # not using boost
 LIBS="$LIBS -pthread -lssl -lcrypto -lz -Wno-deprecated-declarations"
 BUILD_DIR="build/native"
 CPP="g++"
+EXTRA=""
 
 # clean up
 rm -Rf --one-file-system "$BUILD_DIR"
@@ -42,15 +43,17 @@ fi
 
 if [[ "$OS_NAME" == "windows" ]]; then
   LIBS="$LIBS -lcrypt32 -lws2_32"
+else
+  EXTRA="$EXTRA -flto"
 fi
 
 echo "Building ..."
 if [[ "$1" == "debug" ]]; then
   # debug build
-  $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME" -g -fexceptions || exit 1
+  $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME" -g -fexceptions $EXTRA || exit 1
 else
   # release build
-  $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME" -fexceptions -Os -flto || exit 1
+  $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME" -fexceptions -Os $EXTRA || exit 1
   echo "Copying other files ..."
   cp LICENSE "$BUILD_DIR/"
   if [ -f "cacert.pem" ]; then

@@ -24,3 +24,6 @@ Subdirectories of this repository may contain their own LICENSE file. Files with
 subdirectories containing their own LICENSE file are exempt from the above license
 and are subject to the license contained within the LICENSE file in their containing
 directory.
+
+cacert.pem is based on Mozilla's source and licensed under the terms of MPL 2.0
+see https://curl.se/docs/caextract.html

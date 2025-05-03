@@ -17,10 +17,11 @@ mkdir -p "$BUILD_DIR"
 echo "Building ..."
 if [[ "$1" == "debug" ]]; then
   # debug build
-  $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME.exe" -g -fexceptions || exit 1
+  DEFINES="$DEFINES -DAPCLIENT_DEBUG -DUSB2SNES_DEBUG"
+  $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME.exe" -g -fexceptions $EXTRA || exit 1
 else
   # release build
-  $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME.exe" -fexceptions -Os -s || exit 1  # -flto
+  $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME.exe" -fexceptions -Os -s $EXTRA || exit 1  # -flto
   $STRIP "$BUILD_DIR/$NAME.exe"
   echo "Copying other files ..."
   cp LICENSE "$BUILD_DIR/"

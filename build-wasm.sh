@@ -7,7 +7,9 @@ source build.cfg
 
 LIBS="$LIBS -lidbfs.js -DUSE_IDBFS"
 BUILD_DIR="build/$NAME"
-DEFINES="-DAP_NO_SCHEMA"
+DEFINES="$DEFINES -DAP_NO_SCHEMA -DAPCLIENT_DEBUG -DUSB2SNES_DEBUG"
+# NOTE: in WASM we don't want schema for size reasons, but we want debug output because it's easy to hide
+EXTRA="$EXTRA -flto"
 
 # clean up
 rm -Rf --one-file-system "$BUILD_DIR"
@@ -17,12 +19,12 @@ echo "Building ..."
 
 # debug build
 if [[ "$1" == "debug" ]] || [[ "$1" == "stat" ]]; then
-  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $DEFINES $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.html" -fexceptions -Og -flto -sASSERTIONS -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=1024 || exit 1
+  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $DEFINES $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.html" -fexceptions -Og -sASSERTIONS -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=1024 $EXTRA || exit 1
 fi
 
 # release build
 if [[ "$1" != "debug" ]]; then
-  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $DEFINES $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.min.html" -fexceptions -DAP_NO_SCHEMA -Oz -flto -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=1024MB || exit 1
+  em++ --bind $SRC "src/games/$GAME_C" $INCLUDE_DIRS -DGAME_H="\"games/$GAME_H\"" $DEFINES $LIBS --shell-file ui/shell.html -o "$BUILD_DIR/$NAME.min.html" -fexceptions -Oz -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=1024MB $EXTRA || exit 1
   # pre-compress to be served through .htaccess overrides
   echo "Pre-compressing files ..."
   brotli -k -q 11 "$BUILD_DIR/$NAME.min.wasm" "$BUILD_DIR/$NAME.min.js" "$BUILD_DIR/$NAME.min.html"

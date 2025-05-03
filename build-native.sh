@@ -9,7 +9,6 @@ LIBS="$LIBS -pthread -lssl -lcrypto -lz -Wno-deprecated-declarations"
 BUILD_DIR="build/native"
 CPP="g++"
 STRIP="strip"
-EXTRA=""
 
 # clean up
 rm -Rf --one-file-system "$BUILD_DIR"
@@ -53,6 +52,7 @@ fi
 echo "Building ..."
 if [[ "$1" == "debug" ]]; then
   # debug build
+  DEFINES="$DEFINES -DAPCLIENT_DEBUG -DUSB2SNES_DEBUG"
   $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME" -g -fexceptions $EXTRA || exit 1
 else
   # release build

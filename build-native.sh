@@ -8,6 +8,7 @@ DEFINES="$DEFINES -DASIO_STANDALONE -DWSWRAP_SEND_EXCEPTIONS" # not using boost
 LIBS="$LIBS -pthread -lssl -lcrypto -lz -Wno-deprecated-declarations"
 BUILD_DIR="build/native"
 CPP="g++"
+STRIP="strip"
 EXTRA=""
 
 # clean up
@@ -54,6 +55,7 @@ if [[ "$1" == "debug" ]]; then
 else
   # release build
   $CPP $SRC "src/games/$GAME_C" $INCLUDE_DIRS $DEFINES -DGAME_H="\"games/$GAME_H\"" $LIBS -o "$BUILD_DIR/$NAME" -fexceptions -Os $EXTRA || exit 1
+  $STRIP $BUILD_DIR/$NAME*
   echo "Copying other files ..."
   cp LICENSE "$BUILD_DIR/"
   if [ -f "cacert.pem" ]; then

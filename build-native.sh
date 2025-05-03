@@ -38,6 +38,8 @@ if [ -z "$OS_NAME" ]; then
     esac
 fi
 
+ARCH=$(uname -m)
+
 if [[ "$1" == "static" ]]; then
   LIBS="-static -Wl,-Bstatic $LIBS -static-libgcc -static-libstdc++"
 fi
@@ -61,4 +63,19 @@ else
   if [ -f "cacert.pem" ]; then
     cp "cacert.pem" "$BUILD_DIR/"
   fi
+
+  OLD_CWD=`pwd`
+  cd "$BUILD_DIR"
+  echo "Packaging files ..."
+  if [[ "$OS_NAME" == "windows" ]]; then
+    # package zip
+    7z -mx=9 a "../${NAME}-${OS_NAME}-${ARCH}.zip" *
+    if [ -x `which advzip` ]; then
+      advzip -z -4 "../${NAME}-${OS_NAME}-${ARCH}.zip"
+    fi
+  else
+    tar -cJvf "../${NAME}-${OS_NAME}-${ARCH}.tar.xz" *
+  fi
+  # done
+  cd $OLD_CWD
 fi

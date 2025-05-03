@@ -23,6 +23,14 @@ jobs:
         run: |
           ./build-native.sh
 
+      - name: Store Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: soeclient_ubuntu-22-04_amd64
+          path: build/*.tar.xz
+          compression-level: 0
+          if-no-files-found: error
+
   build-windows:
     runs-on: windows-latest
 
@@ -42,7 +50,16 @@ jobs:
           msystem: mingw64
           # update: true
           pacboy: openssl:p pkg-config:p gcc:p binutils:p advancecomp:p
+          install: mingw-w64-x86_64-7zip
 
       - name: Build Static
         run: |
           ./build-native.sh static
+
+      - name: Store Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: soeclient_win64
+          path: build/*.zip
+          compression-level: 0
+          if-no-files-found: error

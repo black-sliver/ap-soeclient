@@ -32,6 +32,13 @@ protected:
         return _bitLocations;
     }
 
+    [[nodiscard]] const std::map<uint32_t, std::vector<std::pair<uint8_t, unsigned> > >& get_byte_locations() const override
+    {
+        // unused in SoE
+        static const std::map<uint32_t, std::vector<std::pair<uint8_t, unsigned> > > empty;
+        return empty;
+    }
+
     void read_seed_and_slot(std::function<void(const std::string&, const std::string&, unsigned flags)> callback) override
     {
         if (_snes->get_state() != USB2SNES::State::SNES_CONNECTED) callback("","",0);

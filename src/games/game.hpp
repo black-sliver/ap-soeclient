@@ -198,10 +198,15 @@ public:
                         _state = State::RUNNING;
                         if (_hOnGameLeft) _hOnGameLeft();
                     } else if (_readBufferValid) {
+#if 0
+                        debug("Read Valid: %zu B, Cache: %zu B, Addr Cache: %zu regions",
+                            _readBuffer.size(), _cache.size(), _addressCache.size());
+#endif
                         std::list<int64_t> locationsChecked;
                         std::list<int64_t> locationsScouted;
+                        const auto& bits = get_bit_locations();
+                        const auto& bytes = get_byte_locations();
                         for (const auto& pair: _readBuffer) {
-                            const auto& bits = get_bit_locations();
                             auto cacheIt = _cache.find(pair.first);
                             if (cacheIt == _cache.end() || cacheIt->second != pair.second)
                             {
@@ -216,6 +221,20 @@ public:
                                             snprintf(msg, sizeof(msg),
                                                      "Looted location (#%u) %" PRId64,
                                                      bit.second, locId);
+                                            log(msg);
+                                            locationsChecked.push_back(locId);
+                                        }
+                                    }
+                                }
+                                auto bytesIt = bytes.find(pair.first);
+                                if (bytesIt != bytes.end()) {
+                                    for (const auto& value: bytesIt->second) {
+                                        if (pair.second >= value.first && old < value.first) {
+                                            int64_t locId = get_location_base() + value.second;
+                                            char msg[128];
+                                            snprintf(msg, sizeof(msg),
+                                                     "Looted location (#%u) %" PRId64,
+                                                     value.second, locId);
                                             log(msg);
                                             locationsChecked.push_back(locId);
                                         }
@@ -340,6 +359,7 @@ protected:
     virtual void on_game_joined() {} // override this to handle game join
 
     [[nodiscard]] virtual const std::map<uint32_t, std::map<uint8_t, unsigned> >& get_bit_locations() const = 0;
+    [[nodiscard]] virtual const std::map<uint32_t, std::vector<std::pair<uint8_t, unsigned> > >& get_byte_locations() const = 0;
     virtual void read_seed_and_slot(std::function<void(const std::string&, const std::string&, unsigned flags)> callback) = 0;
     virtual void read_joined(std::function<void(bool)> callback) = 0;
     virtual void read_finished(std::function<void(bool)> callback) = 0;
@@ -355,6 +375,9 @@ private:
     {
         _addressCache.clear();
         for (const auto& pair: get_bit_locations()) {
+            _addressCache[pair.first] = 1;
+        }
+        for (const auto& pair: get_byte_locations()) {
             _addressCache[pair.first] = 1;
         }
         [[maybe_unused]] const size_t requiredValues = _addressCache.size();

@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <valijson/internal/regex.hpp>
+
 namespace valijson {
 namespace internal {
 namespace uri {
@@ -19,8 +21,20 @@ inline bool isUriAbsolute(const std::string &documentUri)
 }
 
 /**
-  * Placeholder function to resolve a relative URI within a given scope
-  */
+ * @brief  Placeholder function to check whether a URI is a URN
+ *
+ * This function validates that the URI matches the RFC 8141 spec
+ */
+inline bool isUrn(const std::string &documentUri) {
+  static const internal::regex pattern(
+      "^((urn)|(URN)):(?!urn:)([a-zA-Z0-9][a-zA-Z0-9-]{1,31})(:[-a-zA-Z0-9\\\\._~%!$&'()\\/*+,;=]+)+(\\?[-a-zA-Z0-9\\\\._~%!$&'()\\/*+,;:=]+){0,1}(#[-a-zA-Z0-9\\\\._~%!$&'()\\/*+,;:=]+){0,1}$");
+
+  return internal::regex_match(documentUri, pattern);
+}
+
+/**
+ * Placeholder function to resolve a relative URI within a given scope
+ */
 inline std::string resolveRelativeUri(
         const std::string &resolutionScope,
         const std::string &relativeUri)

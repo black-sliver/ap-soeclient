@@ -385,7 +385,7 @@ private:
     unsigned long _lastLocationPoll = 0;
     unsigned long _lastStartedCheck = 0;
     unsigned long _lastJoinedCheck = 0;
-    static constexpr unsigned long LOCATION_POLL_INTERVAL = 1000;
+    static constexpr unsigned long LOCATION_POLL_INTERVAL = 200;
     static constexpr unsigned long STARTED_CHECK_INTERVAL = 1000;
     static constexpr unsigned long JOINED_CHECK_INTERVAL = 1000;
     State _state = State::STOPPED;

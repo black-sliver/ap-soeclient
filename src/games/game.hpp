@@ -305,6 +305,8 @@ public:
         return _wantDeathlink;
     }
 
+    virtual void set_locations(const std::set<int64_t>& checked, const std::set<int64_t>& missing) = 0;
+
     virtual void send_item(int index, int64_t id, const std::string& sender, const std::string& location) = 0;
 
     /// Ignore (part of) the receiving lock for the next item. Returns false if feature is unsupported.

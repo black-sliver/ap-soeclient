@@ -93,6 +93,10 @@ protected:
         if (index > _lastItemIndex) _lastItemIndex = index;
     }
 
+    void set_locations(const std::set<int64_t>&, const std::set<int64_t>&) override
+    {
+    }
+
     void send_death() override
     {
         if (_deathlink)

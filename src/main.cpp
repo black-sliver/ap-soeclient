@@ -206,6 +206,10 @@ void connect_ap(std::string uri="")
     printf("Connecting to AP...\n");
     ap = std::make_unique<APClient>(uuid, GAME::Name, uri.empty() ? APClient::DEFAULT_URI : uri, CERT_STORE);
 
+    // work around problems where we send locations that don't exist but we depend on checked_locations
+    // TODO: don't send locations that don't exist in apclientpp?
+    ap->set_receive_own_locations(true);
+
     // clear game's cache. read below on socket_connected_handler
     if (game) game->clear_cache();
 
@@ -258,6 +262,8 @@ void connect_ap(std::string uri="")
     });
     ap->set_slot_connected_handler([](const json&){
         game->set_deathlink(game->want_deathlink());
+        // tell game which locations should exist and which have been looted
+        game->set_locations(ap->get_checked_locations(), ap->get_missing_locations());
         set_status_color("ap", "#00ff00");
     });
     ap->set_slot_disconnected_handler([](){
@@ -364,6 +370,8 @@ void create_game()
                 if (game->get_deathlink()) tags.emplace_back("DeathLink");
                 ap->ConnectUpdate(false, 0, true, {"DeathLink"});
             }
+            // tell game which locations should exist and which have been looted
+            game->set_locations(ap->get_checked_locations(), ap->get_missing_locations());
         }
         if (ap && ap->get_state() == APClient::State::ROOM_INFO) {
             if (!game->get_seed().empty() &&
@@ -523,6 +531,7 @@ void on_command(const std::string& command)
         disconnect_ap();
     } else if (command == "/sync") {
         if (game) game->clear_cache();
+        if (game && ap) game->set_locations(ap->get_checked_locations(), ap->get_missing_locations());
         if (ap) ap->Sync();
     } else if (command == "/force-send") {
         if (!game) printf("Can't force-send if game is not running.\n");

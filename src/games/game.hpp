@@ -355,11 +355,14 @@ private:
         for (const auto& pair: get_bit_locations()) {
             _addressCache[pair.first] = 1;
         }
+        [[maybe_unused]] const size_t requiredValues = _addressCache.size();
+        [[maybe_unused]] size_t actualValues = 0;
+
         // merge continuous reads
         auto prev = _addressCache.rbegin();
         for (auto it = prev; it != _addressCache.rend(); ++it)
         {
-            if (prev != it && it->first >= prev->first-3) { // allow 2B hole per 1B data
+            if (prev != it && it->first >= prev->first - 4) { // allow 3B hole per 1B data
                 //printf("merging $%06x:%u .. $%06x:%u", it->first, it->second, prev->first, prev->second);
                 it->second = prev->second + (prev->first - it->first);
                 prev->second = 0;
@@ -370,9 +373,15 @@ private:
         // clean up zero reads
         for (auto it = _addressCache.begin(); it != _addressCache.end();)
         {
-            if (it->second == 0) it = _addressCache.erase(it);
-            else ++it;
+            actualValues += it->second;
+            if (it->second == 0) {
+                it = _addressCache.erase(it);
+            }
+            else {
+                ++it;
+            }
         }
+        debug("locations will read %zu actual bytes for %zu required bytes", actualValues, requiredValues);
     }
 
     void invalidate_pending_read()

@@ -337,7 +337,7 @@ protected:
     
     virtual void on_game_joined() {} // override this to handle game join
 
-    [[nodiscard]] virtual const std::map<uint32_t, std::map<uint8_t, unsigned> > get_bit_locations() const = 0;
+    [[nodiscard]] virtual const std::map<uint32_t, std::map<uint8_t, unsigned> >& get_bit_locations() const = 0;
     virtual void read_seed_and_slot(std::function<void(const std::string&, const std::string&, unsigned flags)> callback) = 0;
     virtual void read_joined(std::function<void(bool)> callback) = 0;
     virtual void read_finished(std::function<void(bool)> callback) = 0;

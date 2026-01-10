@@ -27,7 +27,7 @@ public:
     ~SoE() override = default;
 
 protected:
-    [[nodiscard]] const std::map<uint32_t, std::map<uint8_t, unsigned> > get_bit_locations() const override
+    [[nodiscard]] const std::map<uint32_t, std::map<uint8_t, unsigned> >& get_bit_locations() const override
     {
         return _bitLocations;
     }

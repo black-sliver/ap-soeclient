@@ -1,11 +1,31 @@
-#include <apclient.hpp>
-#include "usb2snes.hpp"
-#include <apuuid.hpp>
-#include <stdio.h>
-#include <inttypes.h>
-#include <unistd.h>
 #include <algorithm>
+#include <cinttypes>
+#include <cstdio>
 #include <memory>
+#include <unistd.h>
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas" // some warnings may be gcc-only, some clang-only
+#pragma GCC diagnostic ignored "-Wunknown-warning-option" // some warnings may be gcc-only, some clang-only
+#pragma GCC diagnostic ignored "-Wunused-private-field" // JS implementation of wswrap triggers this with clang
+#pragma GCC diagnostic ignored "-Wconversion" // ASIO may have conversion warnings
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations" // asio <-> openssl; TODO: update ASIO
+#pragma GCC diagnostic ignored "-Wtemplate-id-cdtor" // upstream websocketpp is not C++20; TODO: patch websocketpp
+#ifdef _WIN32
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
+#endif
+
+#include <apclient.hpp>
+#include <apuuid.hpp>
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+
+#include "usb2snes.hpp"
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -18,12 +38,14 @@
 #include <poll.h>
 #endif
 #endif
-#include <math.h>
+
+#include <cmath>
 #include <limits>
 
 #if defined(WIN32) && !defined(PRId64 )
 #define PRId64 "I64d"
 #endif
+
 
 #include GAME_H
 
@@ -79,7 +101,7 @@ decltype(USB2SNES::LEGACY_URI) constexpr USB2SNES::LEGACY_URI;
 #endif
 
 
-bool isEqual(double a, double b)
+bool isEqual(const double a, const double b)
 {
     return fabs(a - b) < std::numeric_limits<double>::epsilon() * fmax(fabs(a), fabs(b));
 }
@@ -87,12 +109,13 @@ bool isEqual(double a, double b)
 
 void set_status_color(const std::string& field, const std::string& color)
 {
-
 #ifdef __EMSCRIPTEN__
     EM_ASM({
         document.getElementById(UTF8ToString($0)).style.color = UTF8ToString($1);
     }, field.c_str(), color.c_str());
 #else
+    (void)field;
+    (void)color;
 #endif
 }
 
@@ -151,13 +174,13 @@ void connect_ap(std::string uri="")
     is_wss = uri.rfind("wss://", 0) == 0;
 
     // remove scheme from URI for UUID generation and localhost-detection; UUID is per room this way
-    std::string uri_without_scheme =
+    const std::string uri_without_scheme =
             uri.empty() ? APClient::DEFAULT_URI :
             is_ws ? uri.substr(5) :
             is_wss ? uri.substr(6) :
             uri;
 
-    std::string uuid = ap_get_uuid(UUID_FILE, uri_without_scheme);
+    const std::string uuid = ap_get_uuid(UUID_FILE, uri_without_scheme);
 
 #ifdef __EMSCRIPTEN__
     bool is_localhost = false;
@@ -181,7 +204,7 @@ void connect_ap(std::string uri="")
     #endif
 
     printf("Connecting to AP...\n");
-    ap.reset(new APClient(uuid, GAME::Name, uri.empty() ? APClient::DEFAULT_URI : uri, CERT_STORE));
+    ap = std::make_unique<APClient>(uuid, GAME::Name, uri.empty() ? APClient::DEFAULT_URI : uri, CERT_STORE);
 
     // clear game's cache. read below on socket_connected_handler
     if (game) game->clear_cache();
@@ -204,6 +227,7 @@ void connect_ap(std::string uri="")
     ap->set_socket_error_handler([](const std::string& error) {
         connect_error_count++;
         #ifdef __EMSCRIPTEN__
+        (void)error;
         set_status_color("ap", "#ff0000");
         if (is_https && !is_wss) {
             if (connect_error_count == 2) {
@@ -220,7 +244,7 @@ void connect_ap(std::string uri="")
         #endif
     });
     ap->set_room_info_handler([](){
-        // compare seeds and error out if it's the wrong one, and then (try to) connect with games's slot
+        // compare seeds and error out if it's the wrong one, and then (try to) connect with game's slot
         if (!game || game->get_seed().empty() || game->get_slot().empty())
             printf("Waiting for game ...\n");
         else if (strncmp(game->get_seed().c_str(), ap->get_seed().c_str(), GAME::MAX_SEED_LENGTH) != 0) {
@@ -259,16 +283,16 @@ void connect_ap(std::string uri="")
             return;
         }
         for (const auto& item: items) {
-            std::string itemname = ap->get_item_name(item.item, ap->get_player_game(ap->get_player_number()));
-            std::string sender = ap->get_player_alias(item.player);
-            std::string location = ap->get_location_name(item.location, ap->get_player_game(item.player));
+            const std::string name = ap->get_item_name(item.item, ap->get_player_game(ap->get_player_number()));
+            const std::string sender = ap->get_player_alias(item.player);
+            const std::string location = ap->get_location_name(item.location, ap->get_player_game(item.player));
             printf("  #%d: %s (%" PRId64 ") from %s - %s\n",
-                   item.index, itemname.c_str(), item.item,
+                   item.index, name.c_str(), item.item,
                    sender.c_str(), location.c_str());
             game->send_item(item.index, item.item, sender, location);
         }
     });
-    ap->set_data_package_changed_handler([](const json& data) {
+    ap->set_data_package_changed_handler([](const json&) {
         #ifdef __EMSCRIPTEN__
         EM_ASM(
             FS.syncfs(function (err) {});
@@ -283,8 +307,8 @@ void connect_ap(std::string uri="")
     });
     ap->set_bounced_handler([](const json& cmd) {
         if (game->want_deathlink()) {
-            auto tagsIt = cmd.find("tags");
-            auto dataIt = cmd.find("data");
+            const auto tagsIt = cmd.find("tags");
+            const auto dataIt = cmd.find("data");
             if (tagsIt != cmd.end() && tagsIt->is_array()
                     && std::find(tagsIt->begin(), tagsIt->end(), "DeathLink") != tagsIt->end())
             {
@@ -312,7 +336,7 @@ void create_game()
     game.reset();
     
     printf("Instantiating \"%s\" game...\n", GAME::Name);
-    game.reset(new GAME(snes.get()));
+    game = std::make_unique<GAME>(snes.get());
     set_status_color("game", "#ff0000");
     game->set_game_started_handler([]() {
         game->clear_cache(); // is this good enough?
@@ -327,17 +351,17 @@ void create_game()
                 game->reset();
                 return;
             }
-            else if (game->get_slot() != ap->get_slot())
+            if (game->get_slot() != ap->get_slot())
             {
                 slot_changed(ap->get_slot(), game->get_slot());
                 ap->reset();
                 game->reset();
                 return;
             }
-            else if (game->get_deathlink() != game->want_deathlink()) {
+            if (game->get_deathlink() != game->want_deathlink()) {
                 std::list<std::string> tags;
                 game->set_deathlink(game->want_deathlink());
-                if (game->get_deathlink()) tags.push_back("DeathLink");
+                if (game->get_deathlink()) tags.emplace_back("DeathLink");
                 ap->ConnectUpdate(false, 0, true, {"DeathLink"});
             }
         }
@@ -348,7 +372,8 @@ void create_game()
                 bad_seed(ap->get_seed(), game->get_seed());
                 game->reset();
                 return;
-            } else if (ap->has_password()) {
+            }
+            if (ap->has_password()) {
                 ask_password();
             } else {
                 connect_slot("");
@@ -374,16 +399,16 @@ void create_game()
         printf("Game finished!\n");
         if (ap) ap->StatusUpdate(APClient::ClientStatus::GOAL);
     });
-    game->set_locations_checked_handler([](std::list<int64_t> locations) {
+    game->set_locations_checked_handler([](const std::list<int64_t>& locations) {
         if (ap) ap->LocationChecks(locations);
     });
-    game->set_locations_scouted_handler([](std::list<int64_t> locations) {
+    game->set_locations_scouted_handler([](const std::list<int64_t>& locations) {
         if (ap) ap->LocationScouts(locations);
     });
     game->set_death_handler([]() {
         if (!ap) return;
         deathtime = ap->get_server_time();
-        json data{
+        const json data{
             {"time", deathtime},
             {"cause", "Evermore."},
             {"source", ap->get_slot()},
@@ -401,6 +426,7 @@ void password_entered(const std::string& password)
 bool read_command(std::string& cmd)
 {
 #if defined __EMSCRIPTEN__
+    (void)cmd;
     return false;
 #elif defined WIN32 || defined _WIN32
     static std::string cmd_buf;
@@ -449,9 +475,10 @@ bool read_command(std::string& cmd)
             i-=4;
         }
     }
-    WCHAR *wBuf2 = new WCHAR[cmd_buf.length() + 1];
+    int tmpLen = static_cast<int>(cmd_buf.length() + 1);
+    WCHAR *wBuf2 = new WCHAR[tmpLen]; // definitely big enough
     wBuf2[0] = 0;
-    MultiByteToWideChar(CP_UTF8, 0, cmd_buf.c_str(), cmd_buf.length() + 1, wBuf2, cmd_buf.length() + 1);
+    MultiByteToWideChar(CP_UTF8, 0, cmd_buf.c_str(), tmpLen, wBuf2, tmpLen);
     wprintf(L"\r                                        \r%ls", wBuf2);
     delete[] wBuf2;
     size_t p = cmd_buf.find('\r');
@@ -463,11 +490,11 @@ bool read_command(std::string& cmd)
     while (!cmd.empty() && (cmd.back() == '\n' || cmd.back() == '\r')) cmd.pop_back();
     return !cmd.empty();
 #else
-    struct pollfd fd = { STDIN_FILENO, POLLIN, 0 };
-    int res = poll(&fd, 1, 5);
+    pollfd fd = { STDIN_FILENO, POLLIN, 0 };
+    const int res = poll(&fd, 1, 5);
     if (res && fd.revents) {
         cmd.resize(1024);
-        if (fgets((char*)cmd.data(), cmd.size(), stdin)) {
+        if (fgets(const_cast<char*>(cmd.data()), static_cast<int>(cmd.size()), stdin)) {
             cmd.resize(strlen(cmd.data()));
             while (!cmd.empty() && (cmd.back() == '\n' || cmd.back() == '\r')) cmd.pop_back();
             return !cmd.empty();
@@ -520,7 +547,7 @@ void on_command(const std::string& command)
     }
 }
 
-EM_BOOL step(double time, void* userData)
+EM_BOOL step([[maybe_unused]] const double time, [[maybe_unused]] void* userData)
 {
     // we run code that acts on elapsed time in the main loop
     // TODO: use async timers (for JS) instead and get rid of step() altogether
@@ -536,7 +563,8 @@ EM_BOOL step(double time, void* userData)
 
     return EM_TRUE;
 }
-EM_BOOL interval_step(double time)
+
+EM_BOOL interval_step(const double time)
 {
     return step(time, nullptr);
 }
@@ -549,7 +577,7 @@ void start()
 
     printf("Connecting to SNES...\n");
     set_status_color("snes", "#ff0000");
-    snes.reset(new USB2SNES());
+    snes = std::make_unique<USB2SNES>();
     snes->set_socket_connected_handler([](){
         set_status_color("snes", "#ffff00");
     });
@@ -587,11 +615,11 @@ void start()
         setInterval(function(){Module.step(0);}, 100);
     });
 #else
-    while (step(0, nullptr));
+    while (step(0, nullptr)) {}
 #endif
 }
 
-int main(int argc, char** argv)
+int main()
 {
 #ifdef __EMSCRIPTEN__
     is_https = EM_ASM_INT({
@@ -622,7 +650,7 @@ int main(int argc, char** argv)
     start();
 #endif
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 #ifdef __EMSCRIPTEN__

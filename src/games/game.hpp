@@ -1,13 +1,13 @@
-#ifndef _GAMES_GAME_H
-#define _GAMES_GAME_H
+#pragma once
 
-
-#include "../usb2snes.hpp"
-#include <inttypes.h>
+#include <cinttypes>
 #include <functional>
-#include <string>
 #include <list>
 #include <map>
+#include <set>
+#include <string>
+#include <utility>
+#include "../usb2snes.hpp"
 
 #if defined(WIN32) && !defined(PRId64 )
 #define PRId64 "I64d"
@@ -26,11 +26,11 @@ public:
     struct bitaddr {
         // generic helper to define a list of location bits
         uint32_t val;
-        bitaddr(uint32_t addr, uint8_t mask) {
+        bitaddr(const uint32_t addr, const uint8_t mask) {
             val = addr<<8 | mask;
         }
-        uint32_t addr() const { return val>>8; }
-        uint8_t mask() const { return (uint8_t)(val & 0xff); }
+        [[nodiscard]] uint32_t addr() const { return val>>8; }
+        [[nodiscard]] uint8_t mask() const { return static_cast<uint8_t>(val & 0xff); }
         bool operator==(const bitaddr& other) const {
             return val == other.val;
         }
@@ -46,7 +46,7 @@ public:
         FINISHED, // finished (player maybe still playing)
     };
 
-    Game(USB2SNES* snes)
+    explicit Game(USB2SNES* snes)
         : _snes(snes)
     {
         _lastLocationPoll = now() - LOCATION_POLL_INTERVAL;
@@ -55,12 +55,13 @@ public:
     virtual ~Game()
     {
         // TODO: cancel all pending callbacks in _snes
-        reset();
+        Game::reset();
     }
 
     virtual void reset()
     {
         // either this or the destructor should be called if the connection is lost
+        debug("%s", "reset");
         clear_cache();
         invalidate_pending_read();
         _seed.clear();
@@ -165,7 +166,7 @@ public:
                     auto len = pair.second;
                     _snes->read_memory(addr, len, [this,addr,len](const std::string& data) {
                         for (uint32_t i=0; i<len; i++) {
-                            _readBuffer[addr+i] = (uint8_t)data[i];
+                            _readBuffer[addr + i] = static_cast<uint8_t>(data[i]);
                         }
                     });
                 }
@@ -242,77 +243,78 @@ public:
 
     void set_game_started_handler(std::function<void(void)> f)
     {
-        _hOnGameStarted = f;
+        _hOnGameStarted = std::move(f);
     }
 
     void set_game_stopped_handler(std::function<void(void)> f)
     {
-        _hOnGameStopped = f;
+        _hOnGameStopped = std::move(f);
     }
 
     void set_game_joined_handler(std::function<void(void)> f)
     {
-        _hOnGameJoined = f;
+        _hOnGameJoined = std::move(f);
     }
 
     void set_game_left_handler(std::function<void(void)> f)
     {
-        _hOnGameLeft = f;
+        _hOnGameLeft = std::move(f);
     }
 
     void set_locations_checked_handler(std::function<void(std::list<int64_t>)> f)
     {
-        _hOnLocationsChecked = f;
+        _hOnLocationsChecked = std::move(f);
     }
 
     void set_locations_scouted_handler(std::function<void(std::list<int64_t>)> f)
     {
-        _hOnLocationsScouted = f;
+        _hOnLocationsScouted = std::move(f);
     }
 
     void set_game_finished_handler(std::function<void(void)> f)
     {
-        _hOnGameFinished = f;
+        _hOnGameFinished = std::move(f);
     }
 
     void set_death_handler(std::function<void(void)> f)
     {
-        _hOnDeath = f;
+        _hOnDeath = std::move(f);
     }
 
-    State get_state() const {
+    [[nodiscard]] State get_state() const {
         return _state;
     }
 
-    const std::string& get_slot() const {
+    [[nodiscard]] const std::string& get_slot() const {
         return _slot;
     }
 
-    const std::string& get_seed() const {
+    [[nodiscard]] const std::string& get_seed() const {
         return _seed;
     }
 
-    void set_deathlink(bool value) {
+    void set_deathlink(const bool value) {
         _deathlink = value;
     }
 
-    bool get_deathlink() const {
+    [[nodiscard]] bool get_deathlink() const {
         return _deathlink;
     }
 
-    bool want_deathlink() const {
+    [[nodiscard]] bool want_deathlink() const {
         return _wantDeathlink;
     }
 
     virtual void send_item(int index, int64_t id, const std::string& sender, const std::string& location) = 0;
 
+    /// Ignore (part of) the receiving lock for the next item. Returns false if feature is unsupported.
     virtual bool force_send() { return false; }
 
     virtual bool force_resend() { return false; }
 
     virtual void send_death() = 0;
 
-    virtual int get_items_handling() const = 0;
+    [[nodiscard]] virtual int get_items_handling() const = 0;
 
 protected:
     enum Flags {
@@ -326,20 +328,20 @@ protected:
 
     static unsigned long now()
     {
-        struct timespec ts;
+        timespec ts{};
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        unsigned long ms = (unsigned long)ts.tv_sec * 1000;
-        ms += (unsigned long)ts.tv_nsec / 1000000;
+        unsigned long ms = static_cast<unsigned long>(ts.tv_sec) * 1000;
+        ms += static_cast<unsigned long>(ts.tv_nsec / 1000000);
         return ms;
     }
     
     virtual void on_game_joined() {} // override this to handle game join
 
-    virtual const std::map<uint32_t, std::map<uint8_t, unsigned> > get_bit_locations() const = 0;
+    [[nodiscard]] virtual const std::map<uint32_t, std::map<uint8_t, unsigned> > get_bit_locations() const = 0;
     virtual void read_seed_and_slot(std::function<void(const std::string&, const std::string&, unsigned flags)> callback) = 0;
     virtual void read_joined(std::function<void(bool)> callback) = 0;
     virtual void read_finished(std::function<void(bool)> callback) = 0;
-    virtual int64_t get_location_base() const = 0;
+    [[nodiscard]] virtual int64_t get_location_base() const = 0;
     
     USB2SNES* _snes = nullptr;
     bool _deathlink = false;
@@ -402,5 +404,3 @@ private:
     std::function<void(std::list<int64_t>)> _hOnLocationsChecked = nullptr;
     std::function<void(std::list<int64_t>)> _hOnLocationsScouted = nullptr;
 };
-
-#endif // _GAMES_GAME_H

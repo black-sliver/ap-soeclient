@@ -1,20 +1,38 @@
-#ifndef _USB2SNES_H
-#define _USB2SNES_H
+#pragma once
+
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <queue>
+#include <string>
+#include <time.h>
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas" // some warnings may be gcc-only, some clang-only
+#pragma GCC diagnostic ignored "-Wunknown-warning-option" // some warnings may be gcc-only, some clang-only
+#pragma GCC diagnostic ignored "-Wconversion" // ASIO may have conversion warnings
+#pragma GCC diagnostic ignored "-Wsign-conversion" // nlohmann::json triggers this with clang
+#pragma GCC diagnostic ignored "-Wunused-private-field" // JS implementation of wswrap triggers this with clang
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations" // asio <-> openssl; TODO: update ASIO
+#pragma GCC diagnostic ignored "-Wtemplate-id-cdtor" // upstream websocketpp is not C++20; TODO: patch websocketpp
+#ifdef _WIN32
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
+#endif
 
 #include <wswrap.hpp>
-#include <string>
-#include <queue>
 #include <nlohmann/json.hpp>
-#include <functional>
-#include <time.h>
-#include <algorithm>
-#include <memory>
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 
 
 //#define USB2SNES_DEBUG // to get debug output
 
 
-class USB2SNES {
+class USB2SNES final {
 protected:
     typedef nlohmann::json json;
     typedef wswrap::WS WS;
@@ -22,7 +40,7 @@ protected:
     static constexpr char LEGACY_URI[] = "ws://localhost:8080";
 
 public:
-    USB2SNES(const std::string& uri=DEFAULT_URI)
+    explicit USB2SNES(const std::string& uri=DEFAULT_URI)
     {
         if (uri == DEFAULT_URI)
             _uri = LEGACY_URI; // connect will swap it
@@ -34,7 +52,7 @@ public:
         connect_socket();
     }
 
-    virtual ~USB2SNES()
+    ~USB2SNES()
     {
         if (_state == State::SNES_CONNECTED) {
             _state = State::SOCKET_CONNECTED;
@@ -47,7 +65,7 @@ public:
         _state = State::DISCONNECTED;
         _ws.reset();
     }
-    
+
     enum class State {
         DISCONNECTED,
         SOCKET_CONNECTING,
@@ -59,23 +77,23 @@ public:
 
     State get_state() const { return _state; }
 
-    void read_memory(uint32_t addr, uint32_t len, std::function<void(const std::string&)> callback)
+    void read_memory(const uint32_t addr, const uint32_t len, std::function<void(const std::string&)> callback)
     {
         if (len == 0) {
             warn("read_memory with len=0 requested. Fix your code.");
             if (!callback) return;
         }
-        char saddr[9]; snprintf(saddr, sizeof(saddr), "%06X", (unsigned)mapaddr(addr));
-        char slen[9];  snprintf(slen,  sizeof(slen),  "%X",   (unsigned)len);
+        char saddr[9]; snprintf(saddr, sizeof(saddr), "%06X", static_cast<unsigned>(mapaddr(addr)));
+        char slen[9];  snprintf(slen,  sizeof(slen),  "%X",   static_cast<unsigned>(len));
         
         send(json{
             {"Opcode", "GetAddress"},
             {"Space", "SNES"},
             {"Operands", {saddr, slen}}
-        }, len, callback);
+        }, len, std::move(callback));
     }
-    
-    bool write_memory(uint32_t addr, const std::string& data)
+
+    bool write_memory(const uint32_t addr, const std::string& data)
     {
         if (_state < State::SNES_CONNECTED) return false;
         if (data.length() == 0) {
@@ -83,8 +101,8 @@ public:
             return true;
         }
         // TODO: return false if not connected
-        char saddr[9]; snprintf(saddr, sizeof(saddr), "%06X", (unsigned)mapaddr(addr));
-        char slen[9];  snprintf(slen,  sizeof(slen),  "%X",   (unsigned)data.length());
+        char saddr[9]; snprintf(saddr, sizeof(saddr), "%06X", static_cast<unsigned>(mapaddr(addr)));
+        char slen[9];  snprintf(slen,  sizeof(slen),  "%X",   static_cast<unsigned>(data.length()));
         send(json{
             {"Opcode", "PutAddress"},
             {"Space", "SNES"},
@@ -118,29 +136,29 @@ public:
         }
     }
 
-    bool idle()
+    bool idle() const
     {
         return (_state == State::SNES_CONNECTED && _txQueue.empty());
     }
 
     void set_socket_connected_handler(std::function<void(void)> f)
     {
-        _hOnSocketConnected = f;
+        _hOnSocketConnected = std::move(f);
     }
 
     void set_socket_disconnected_handler(std::function<void(void)> f)
     {
-        _hOnSocketDisconnected = f;
+        _hOnSocketDisconnected = std::move(f);
     }
 
     void set_snes_connected_handler(std::function<void(void)> f)
     {
-        _hOnSnesConnected = f;
+        _hOnSnesConnected = std::move(f);
     }
 
     void set_snes_disconnected_handler(std::function<void(void)> f)
     {
-        _hOnSnesDisconnected = f;
+        _hOnSnesDisconnected = std::move(f);
     }
 
 private:
@@ -148,18 +166,20 @@ private:
     {
         printf("USB2SNES: %s\n", msg);
     }
+
     void warn(const char* msg)
     {
         fprintf(stderr, "USB2SNES: %s\n", msg);
     }
-    void debug(const char* msg)
+
+    void debug([[maybe_unused]] const char* msg)
     {
 #ifdef USB2SNES_DEBUG
         log(msg);
 #endif
     }
 
-    uint32_t mapaddr(uint32_t addr)
+    uint32_t mapaddr(uint32_t addr) const
     {
         if (addr>>16 == 0x7e || addr>>16==0x7f) return 0xF50000 + (addr&0xffff);
         // fastrom mirror
@@ -176,10 +196,10 @@ private:
         debug("onopen()");
         log("Service connected");
         _state = State::SOCKET_CONNECTED;
-        std::string appname = "SoEAPClient";
+        const std::string appname = "SoEAPClient";
         std::string appid;
-        const char idchars[] = "0123456789abcdef";
-        for (int i=0; i<4; i++) appid += idchars[std::rand()%strlen(idchars)];
+        constexpr char idchars[] = "0123456789abcdef";
+        for (int i=0; i<4; i++) appid += idchars[static_cast<unsigned>(std::rand()) % strlen(idchars)];
         send(json{
             { "Opcode", "Name" },
             { "Space", "SNES" },
@@ -291,13 +311,14 @@ private:
         std::function<void(const std::string&)> responseCallback;
         bool binary;
         bool sent;
-        
-        static constexpr size_t NO_RESPONSE = (size_t)0;
-        static constexpr size_t JSON_RESPONSE = (size_t)-1;
-        
-        TxItem(const std::string& data, size_t expectedResponse=NO_RESPONSE, std::function<void(const std::string&)> responseCallback=nullptr, bool binary=false)
+
+        static constexpr size_t NO_RESPONSE = 0;
+        static constexpr size_t JSON_RESPONSE = static_cast<size_t>(-1);
+
+        explicit TxItem(const std::string& data, const size_t expectedResponse = NO_RESPONSE,
+            std::function<void(const std::string&)> responseCallback = nullptr, const bool binary = false)
             : data(data), expectedResponse(expectedResponse),
-              responseCallback(responseCallback), binary(binary), sent(false)
+              responseCallback(std::move(responseCallback)), binary(binary), sent(false)
         {
         }
     };
@@ -312,25 +333,27 @@ private:
         _txQueue.back().sent = true;
     }
 
-    void send(const std::string& data, size_t expectedResponse, std::function<void(const std::string&)> responseCallback=nullptr)
+    void send(const std::string& data, const size_t expectedResponse,
+        std::function<void(const std::string&)> responseCallback = nullptr)
     {
-        send(TxItem{data, expectedResponse, responseCallback});
+        send(TxItem{data, expectedResponse, std::move(responseCallback)});
     }
 
-    void send(const json& data, size_t expectedResponse, std::function<void(const std::string&)> responseCallback=nullptr)
+    void send(const json& data, const size_t expectedResponse,
+        std::function<void(const std::string&)> responseCallback = nullptr)
     {
-        send(TxItem{data.dump(), expectedResponse, responseCallback});
+        send(TxItem{data.dump(), expectedResponse, std::move(responseCallback)});
     }
 
     void send(const json& data, const std::string& bytes)
     {
         debug(("send: " + data.dump() + " [" + std::to_string(data.dump().length()) +"]").c_str());
         printf("USB2SNES: send: ");
-        for (char c: bytes) {
-            uint8_t b = (uint8_t)c;
-            printf("%02x ", (unsigned)b);
+        for (const char c: bytes) {
+            const uint8_t b = static_cast<uint8_t>(c);
+            printf("%02x ", static_cast<unsigned>(b));
         }
-        printf("[%d]\n", (int)bytes.length());
+        printf("[%lu]\n", static_cast<unsigned long>(bytes.length()));
         send(TxItem{data.dump(), TxItem::NO_RESPONSE, nullptr});
         send(TxItem{bytes, TxItem::NO_RESPONSE, nullptr, true});
     }
@@ -352,21 +375,21 @@ private:
         _state = State::SOCKET_CONNECTING;
         while (!_txQueue.empty()) _txQueue.pop(); // TODO: run error handlers?
         _rxBuffer.clear();
-        _ws.reset(new WS(_uri,
+        _ws = std::make_unique<WS>(_uri,
                 [this]() { onopen(); },
                 [this]() { onclose(); },
                 [this](const std::string& s) { onmessage(s); },
                 [this]() { onerror(); }
-        ));
+        );
         _lastSocketConnect = now();
         _socketReconnectInterval *= 2;
         // NOTE: browsers have a very badly implemented connection rate limit
         // alternatively we could always wait for onclose() to get the actual
         // allowed rate once we are over it
-        unsigned long maxReconnectInterval = std::max(15000UL, _ws->get_ok_connect_interval());
+        const unsigned long maxReconnectInterval = std::max(15000UL, _ws->get_ok_connect_interval());
         if (_socketReconnectInterval > maxReconnectInterval) _socketReconnectInterval = maxReconnectInterval;
     }
-    
+
     void connect_snes()
     {
         if (_state == State::SOCKET_CONNECTED) {
@@ -381,10 +404,10 @@ private:
 
     static unsigned long now()
     {
-        struct timespec ts;
+        timespec ts{};
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        unsigned long ms = (unsigned long)ts.tv_sec * 1000;
-        ms += (unsigned long)ts.tv_nsec / 1000000;
+        unsigned long ms = static_cast<unsigned long>(ts.tv_sec) * 1000;
+        ms += static_cast<unsigned long>(ts.tv_nsec / 1000000);
         return ms;
     }
 
@@ -400,7 +423,4 @@ private:
     unsigned long _lastSocketConnect;
     unsigned long _lastSnesConnect;
     unsigned long _socketReconnectInterval = 1500;
-    
 };
-
-#endif // _USB2SNES_H

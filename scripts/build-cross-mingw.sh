@@ -1,7 +1,8 @@
 #!/bin/bash
-# TODO: replace this by a Makefile
+# run this from project root as `./scripts/build-native.sh`
 
-source build.cfg
+SCRIPTS_DIR=$(dirname "${BASH_SOURCE[0]:-./scripts/build.cfg}")
+source $SCRIPTS_DIR/build.cfg
 
 INCLUDE_DIRS="$INCLUDE_DIRS -Isubprojects/asio/include -Isubprojects/websocketpp"
 DEFINES="$DEFINES -DASIO_STANDALONE -DWSWRAP_SEND_EXCEPTIONS" # not using boost

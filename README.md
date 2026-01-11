@@ -21,7 +21,7 @@ should be able to receive items, use `/force-send` command to ignore the lock.
 
 ## How to build it
 
-see `build-*.sh`
+see `scripts/build-*.sh`
 
 ## Local storage
 

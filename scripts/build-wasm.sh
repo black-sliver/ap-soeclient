@@ -1,9 +1,10 @@
 #!/bin/bash
-# TODO: replace this by a Makefile
+# run this from project root as `./scripts/build-native.sh`
 # NOTES:
 # - using -sALLOW_MEMORY_GROWTH now since there have been asyncs that blew the default limit of 16MB
 
-source build.cfg
+SCRIPTS_DIR=$(dirname "${BASH_SOURCE[0]:-./scripts/build.cfg}")
+source $SCRIPTS_DIR/build.cfg
 
 LIBS="$LIBS -lidbfs.js -DUSE_IDBFS"
 BUILD_DIR="build/$NAME"

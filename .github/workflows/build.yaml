@@ -21,7 +21,7 @@ jobs:
 
       - name: Build
         run: |
-          ./build-native.sh
+          ./scripts/build-native.sh
 
       - name: Store Build
         uses: actions/upload-artifact@v4
@@ -54,7 +54,7 @@ jobs:
 
       - name: Build Static
         run: |
-          ./build-native.sh static
+          ./scripts/build-native.sh static
 
       - name: Store Build
         uses: actions/upload-artifact@v4

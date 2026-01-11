@@ -1,7 +1,7 @@
 # AP SoE Client
 
 This is the [Archipelago Multiworld](https://github.com/ArchipelagoMW/Archipelago)
-client for the Secret of Evermore world.
+client for the Secret of Evermore world and Secret of Mana world.
 
 ## How does it work
 
@@ -35,12 +35,22 @@ see `scripts/build-*.sh`
 
 ## TODO
 
+### Generic
+
+* Pack all clients into a single build (automatically switch)
+
+### SoE
+
 * make Goal stick.
   At the moment
   * connecting to AP host clears the cached Goal status, so
   * be connected to AP host while the outro is running
   * or connect to AP host with the outro still running
 * some text clean-up
+
+### SoM
+
+* DeathLink
 
 ## Attribution
 

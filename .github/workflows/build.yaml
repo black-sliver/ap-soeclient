@@ -21,12 +21,12 @@ jobs:
 
       - name: Build
         run: |
-          ./scripts/build-native.sh
+          make native -j4 CONF=DIST
 
-      - name: Store Build
+      - name: Store Builds
         uses: actions/upload-artifact@v4
         with:
-          name: soeclient_ubuntu-22-04_amd64
+          name: clients_ubuntu-22-04_amd64
           path: build/*.tar.xz
           compression-level: 0
           if-no-files-found: error
@@ -49,17 +49,24 @@ jobs:
         with:
           msystem: mingw64
           # update: true
-          pacboy: openssl:p pkg-config:p gcc:p binutils:p advancecomp:p
-          install: mingw-w64-x86_64-7zip
+          pacboy: >-
+            openssl:p
+            pkg-config:p
+            gcc:p
+            binutils:p
+            advancecomp:p
+          install: >-
+            make
+            p7zip
 
-      - name: Build Static
+      - name: Build
         run: |
-          ./scripts/build-native.sh static
+          make native -j4 CONF=DIST
 
-      - name: Store Build
+      - name: Store Builds
         uses: actions/upload-artifact@v4
         with:
-          name: soeclient_win64
+          name: clients_win64
           path: build/*.zip
           compression-level: 0
           if-no-files-found: error

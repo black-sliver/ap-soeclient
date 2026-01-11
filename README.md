@@ -21,7 +21,43 @@ should be able to receive items, use `/force-send` command to ignore the lock.
 
 ## How to build it
 
-see `scripts/build-*.sh`
+We use handcrafted Makefiles. You need to run make in a bash-like shell.
+Read individual sections below for actual commands to run.
+
+The old build scripts are still available in [./scripts/](./scripts).
+
+We also support "native" builds that run the client in a terminal (instead of a web browser).
+
+### WASM
+
+Install make, emscripten (em++), brotli, gzip and 7z; make all binaries are in your PATH.
+In a bash-like shell, run
+```sh
+make wasm CONF=DIST  # create wasm builds of all clients (one html per game)
+```
+
+### Linux native builds
+
+Install make, g++ and development files for openssl (libssl, libcrypto) and zlib, then run
+```sh
+make native  # create native builds of all clients (one binary per game)
+```
+```sh
+make soe-native  # build just the native SoE client
+```
+
+### Windows native builds
+
+This requires a [msys2](https://www.msys2.org/) environment. In there, install make, g++, openssl,
+then run the same commands as listed for Linux.
+
+### MacOS native builds
+
+This is not supported (yet). Contributions are welcome.
+
+### Cross-builds for Windows on Linux
+
+This is not in the new Makefile yet. See [./scripts/](./scripts) for the old scripts.
 
 ## Local storage
 
@@ -37,6 +73,7 @@ see `scripts/build-*.sh`
 
 ### Generic
 
+* Cross windows builds in Makefile
 * Pack all clients into a single build (automatically switch)
 
 ### SoE

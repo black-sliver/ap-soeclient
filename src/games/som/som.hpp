@@ -166,7 +166,7 @@ protected:
             // (1a. TODO: if not, check if scripts are busy?)
             // 2. if not, check the next send index
             // 3. if correct, queue event
-            _snes->read_memory(0x7eff02, 2, [this](const std::string& res) {
+            _snes->read_memory(0x7e0443, 2, [this](const std::string& res) {
                 // read expected_index and receive busy
                 if (res.size() < 2) {
                     printf("ERROR: could not read send-item state from game\n");
@@ -212,7 +212,7 @@ protected:
                                 static_cast<uint8_t>((newIndex >> 8) & 0xff), // hi
                             };
                             _snes->write_memory(
-                                0x7ecf8e,
+                                0x7ecf88,
                                 std::string(reinterpret_cast<const char *>(overrideIndexBuf), sizeof(overrideIndexBuf))
                             );
                             _ignoreSendIndex = false;

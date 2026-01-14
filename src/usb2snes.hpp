@@ -323,13 +323,14 @@ private:
         }
     };
 
-    void send(const TxItem& item)
+    void send(TxItem item)
     {
-        _txQueue.push(item);
+        _txQueue.push(std::move(item));
+        const auto& data = _txQueue.back().data;
         if (item.binary)
-            _ws->send_binary(item.data);
+            _ws->send_binary(data);
         else
-            _ws->send_text(item.data);
+            _ws->send_text(data);
         _txQueue.back().sent = true;
     }
 
